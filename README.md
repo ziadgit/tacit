@@ -28,17 +28,23 @@ _TODO: hardware, firmware, and backend details._
 
 ## Tech stack
 
-- **Hardware:** TBD
-- **Firmware:** TBD
-- **Mobile / web app:** TBD
-- **Backend / AI:** TBD
+| Piece | Job |
+|---|---|
+| **[Vexo Open band](https://github.com/VexoAI-Org/vexo-open-kit)** | The wristband: microphone, motion sensor, colour LED, over Bluetooth |
+| **[Deepgram](https://deepgram.com)** | Speech to text (Nova-3) and voice (Aura) |
+| **[Exa](https://exa.ai)** | Live web search and research |
+| **Jev ([TypeSafe](https://typesafe.ai))** | Decision model: typed questions about what was heard |
+| **[Vapi](https://vapi.ai)** *(maybe)* | Phone / voice agent |
+
+Python 3.11, managed with [uv](https://docs.astral.sh/uv/).
 
 ## Getting started
 
 ```bash
-git clone <repo-url>
-cd tacit
-# setup instructions coming soon
+git clone https://github.com/ziadgit/tacit && cd tacit
+scripts/bootstrap.sh          # clones vexo-open-kit, installs deps, creates .env
+# fill in .env: your band number (TACIT_BAND) and your keys
+.venv/bin/tacit doctor        # checks the kit and every key
 ```
 
 ## Privacy

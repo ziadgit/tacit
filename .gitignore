@@ -1,0 +1,29 @@
+# The Vexo kit is a reference clone, never committed (see CLAUDE.md)
+vexo-open-kit/
+
+# Secrets
+.env
+.envrc
+.claude/settings.local.json
+
+# Python
+__pycache__/
+*.py[codz]
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+
+# Local data: recordings and transcripts never get committed
+data/
+recordings/
+logs/
+*.opus
+*.wav
+*.mp3
+
+.DS_Store
+.vercel/
