@@ -148,7 +148,9 @@ def patch_me(body: MePatch, user: CurrentUser, store: StoreDep) -> MeOut:
         if k in fields and fields[k] is None:
             raise HTTPException(422, f"{k} can't be null")
     if "kinds_off" in fields:
-        fields["kinds_off"] = [k for k in fields["kinds_off"] or [] if k in MOMENT_KINDS]
+        # stop_request can never be switched off: anyone asking to stop always mutes (§13.2)
+        fields["kinds_off"] = [k for k in fields["kinds_off"] or []
+                               if k in MOMENT_KINDS and k != "stop_request"]
     if "links" in fields:
         fields["links"] = [str(u) for u in body.links or []]
     updated = store.update_user(user.id, **fields)

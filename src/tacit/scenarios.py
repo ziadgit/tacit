@@ -277,7 +277,7 @@ class Scenarios:
             return out
         probs, giver = verdict["probs"], verdict["giver"]
         thr = self.settings.scenario_threshold
-        if probs.get("stop_request", 0) >= thr and "stop_request" not in off:
+        if probs.get("stop_request", 0) >= thr:   # never switchable off
             set_mute_command(self.store, dev, True)
             rewind(self.store, dev, STOP_REWIND_S)
             log.info("window: stop request → mute")

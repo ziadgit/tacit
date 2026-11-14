@@ -236,3 +236,21 @@ def test_bridge_upload_runs_the_pipeline(tmp_path):
          "speaker": 1, "text": "please don't keep any of this"}]})
     assert jev.calls                                   # ran after the upload (20 s of silence)
     assert bridge.get("/api/bridge/commands").json() == {"muted": True, "changed": True}
+
+
+async def test_stop_request_cannot_be_switched_off(tmp_path):
+    jev = FakeJev({"stop_request": 0.95})
+    store, user, dev, pipe = world(tmp_path, jev=jev, llm=FakeLLM())
+    store.update_user(user.id, kinds_off=["stop_request"])
+    seg(store, dev, 50, 5, 1, "stop it")
+    await pipe.maybe_run(dev)
+    assert store.device_for_user(user.id).muted is True
+
+
+def test_patch_me_never_turns_off_stop_request(tmp_path):
+    from tacit.testing import client, onboard
+
+    c = client(tmp_path)
+    onboard(c)
+    me = c.patch("/api/me", json={"kinds_off": ["stop_request", "typing", "nonsense"]}).json()
+    assert me["kinds_off"] == ["typing"]
