@@ -310,8 +310,55 @@
     var m = field(cv, st, o);
     var me = { warm: m.warm, tick: m.tick, resize: function () { if (place()) m.set(o.K); else m.resize(); } };
     heroRefit = me.resize;
-    window.TacitLanding = { hero: me };   /* a handle for checking the drawing by hand: TacitLanding.hero.tick() moves it one step */
+    window.TacitLanding = window.TacitLanding || {}; window.TacitLanding.hero = me;   /* a handle for checking the drawing by hand: TacitLanding.hero.tick() moves it one step */
     run(me, TICK, st);
+  }());
+
+  // ---------- the journey: each step lights up and opens as you scroll ----------
+  /* The idea (lines become legible one by one as reading reaches them, and a bar grows down a track) is adapted from
+     "A little further" (poem-scroll) in the Subframe Motion Library.
+     MIT License. Copyright (c) 2026 Subframe.
+     Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+     documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+     rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit
+     persons to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice
+     and this permission notice shall be included in all copies or substantial portions of the Software.
+     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+     WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+     COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+     OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
+  (function () {
+    var list = document.querySelector('[data-journey]');
+    if (!list) return;
+    var steps = Array.prototype.slice.call(list.children), calm = window.matchMedia('(prefers-reduced-motion: reduce)'), waiting = false;
+    var LINE = 0.72;   /* a step is reached when its top passes this share of the window height */
+    function settle() {   /* no motion wanted: everything lit and open */
+      list.style.setProperty('--p', '1');
+      list.style.setProperty('--end', Math.max(0, list.offsetHeight - steps[steps.length - 1].offsetTop - (steps[0].firstElementChild.offsetHeight / 2 || 26)) + 'px');
+      steps.forEach(function (li) { li.style.removeProperty('--o'); li.classList.add('on'); });
+    }
+    function update() {
+      waiting = false;
+      if (calm.matches) { settle(); return; }
+      var vh = window.innerHeight || 1, box = list.getBoundingClientRect();
+      var half = steps[0].firstElementChild.offsetHeight / 2 || 26;                 /* half a number circle */
+      var track = Math.max(1, steps[steps.length - 1].offsetTop);                    /* the path runs from the first number to the last */
+      list.style.setProperty('--end', Math.max(0, box.height - track - half) + 'px');
+      var walked = Math.max(0, Math.min(1, (vh * LINE - box.top - half) / track));
+      list.style.setProperty('--p', walked.toFixed(3));
+      steps.forEach(function (li) {
+        var below = (li.getBoundingClientRect().top - vh * LINE) / (vh * 0.3);   /* 0 at the line, 1 a third of a screen below it */
+        li.style.setProperty('--o', Math.max(0.27, Math.min(1, 1 - below * 0.73)).toFixed(3));
+        li.classList.toggle('on', below <= 0);
+      });
+    }
+    function ask() { if (!waiting) { waiting = true; requestAnimationFrame(update); } }
+    document.documentElement.classList.add('js-journey');
+    window.addEventListener('scroll', ask, { passive: true });
+    window.addEventListener('resize', ask);
+    if (calm.addEventListener) calm.addEventListener('change', ask);
+    update();
+    window.TacitLanding = window.TacitLanding || {}; window.TacitLanding.journey = update;
   }());
 
   // ---------- 3. small clicks ----------
