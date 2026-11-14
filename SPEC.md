@@ -17,6 +17,7 @@ This build covers the landing page's journey, phone first:
    the ones they want. Others can follow them.
 4. **Learn from people.** Following someone shows their public skills. Their followers-only
    skills unlock with a one-time **Stripe** payment, in test mode.
+   A profile picture can be made with **MiniMax**, drawn in the design system's dots (§17).
 5. **The wristband notices everything** (§13). The Vexo band's mic and motion feed a wide set
    of detectors: advice given and received, explanations, lessons, commitments, writing,
    drawing and more. Advice becomes draft skills and passes in the social feed. Drawing an
@@ -32,7 +33,7 @@ make the smallest change, record it under "Gotchas" in `CLAUDE.md`, and move on.
 This spec is built with `--dangerously-skip-permissions`. These rules override everything else
 in this file.
 
-- **No live network calls to Exa, TypeSafe, Deepgram, Vapi or Stripe**, even though keys may be
+- **No live network calls to Exa, TypeSafe, Deepgram, Vapi, Stripe, OpenAI or MiniMax**, even though keys may be
   in `.env`. Tests use `respx` and fakes. `uv sync` / `uv add` are fine.
 - **Never place a phone call or send a payment.** No `tacit vapi-sync`, no `tacit serve` left
   running against real keys, no `curl` to service APIs.
@@ -71,6 +72,7 @@ src/tacit/
   motion.py      writing / drawing / whiteboard / typing / making detectors (§13.6)
   scenarios.py   windows, Jev classification, extraction, moments, passes (§13.4, §13.5)
   llm.py         OpenAI Responses API over httpx, JSON-schema output (§13.4)
+  portraits.py   MiniMax image generation → dot portraits (§17)
   cli.py         doctor | serve | vapi-sync | bridge | gestures
   *_test.py      tests beside code
 pwa/             the mobile-first PWA, no build step (§12)
@@ -714,6 +716,8 @@ Each kind can be switched off in `#/me`; they all start **on**.
   conversation (§13.5). Anyone saying "stop recording" mutes the band (§13.2). The blue light
   stays visible, and the wearer is told to tell the people around them.
 - Mute is local and works offline. Unmuting needs a deliberate second step.
+- Profile pictures: a person's own photo goes to MiniMax only with their ticked consent, and is
+  never stored. Only the dot map is kept (§17).
 - A skill is public only after the owner publishes it. Removing it hides it everywhere.
 - "Delete everything" really deletes every row.
 - Never log personal data (see §11).
@@ -777,7 +781,8 @@ primary_region = "sjc"
   the Origin check (§4) use `PUBLIC_BASE_URL`, which is `https://<app>.fly.dev`.
 - **Secrets** live only in Fly: `fly secrets set SESSION_SECRET=... VAPI_SERVER_SECRET=...
   VAPI_API_KEY=... DEEPGRAM_API_KEY=... EXA_API_KEY=... TYPESAFE_API_KEY=...
-  STRIPE_SECRET_KEY=... STRIPE_WEBHOOK_SECRET=... OPENAI_API_KEY=... CALL_ALLOWLIST=...` (typed by a
+  STRIPE_SECRET_KEY=... STRIPE_WEBHOOK_SECRET=... OPENAI_API_KEY=... MINIMAX_API_KEY=...
+  CALL_ALLOWLIST=...` (typed by a
   person, never by the build). `fly.toml` holds no secrets.
 - After the first deploy: run `tacit vapi-sync` locally with `PUBLIC_BASE_URL` set to the Fly
   URL, so Vapi's webhook points to `https://<app>.fly.dev/vapi/webhook`, and point the Vapi
@@ -791,3 +796,57 @@ primary_region = "sjc"
 - The README's "Deploy" section: `fly launch --no-deploy` (keep the existing `fly.toml`),
   `fly volumes create tacit_data --region sjc --size 1`, `fly secrets set ...`, `fly deploy`,
   `fly logs`, then the Vapi and Stripe steps above.
+
+## 17. Profile pictures with MiniMax (`portraits.py`, P1)
+
+A person may make a profile picture with **MiniMax** image generation. The design system allows
+no photos next to its drawings, so the picture is never shown as a photo. It is converted into
+the **dot portrait** the landing page already uses (`FACES` and `face()` in
+`landing/landing.js`), and only that dot map is kept.
+
+- **API** (checked against MiniMax's docs, Nov 2026): `POST {minimax_base_url}/v1/image_generation`,
+  `Authorization: Bearer {MINIMAX_API_KEY}`, JSON `{"model": "image-01", "prompt": <≤ 1500
+  chars>, "aspect_ratio": "1:1", "response_format": "base64", "n": 4, "prompt_optimizer":
+  false}`. Read `data.image_base64[]`. **Always base64, never `url`** (the server never fetches
+  outside URLs). Check `base_resp.status_code`: 0 is fine; 1026 → 422 "try different words";
+  1008 → 503 "image credit is used up"; 1002 → 429; 1004 or 2049 → 503 "image service isn't
+  set up". `metadata.failed_count` > 0 (blocked for safety) just means fewer candidates. Timeout
+  60 s. Tests use respx.
+- **Two ways, both started from `#/me` → "your picture":**
+  - **From words** (default): the person describes how they'd like to look (≤ 300 chars). The
+    server builds the prompt: `"Head-and-shoulders portrait of one person, centred, facing the
+    viewer, simple flat shapes, even soft light, plain solid pale lavender background (#E9E4F7),
+    no text, no pattern, no other people. " + description`. No likeness is involved.
+  - **From my photo** (optional): the person picks a photo of **themselves** (`<input
+    type="file" accept="image/*" capture="user">`). The PWA shrinks it to ≤ 1024 px JPEG in a
+    canvas and sends it as a base64 data URL in JSON (≤ 1.5 MB, else 413). It needs an
+    **unticked** checkbox: "This is a photo of me. Send it to MiniMax to make my picture. tacit
+    doesn't keep the photo." The request adds `"subject_reference": [{"type": "character",
+    "image_file": <data URL>}]`. **The photo is never written to disk, the DB or a log**, and is
+    dropped once the request ends.
+  - Never generate from photos Exa found, and never a picture of anyone other than the
+    signed-in user. There's no endpoint for making someone else's picture.
+- **Dot conversion** (`to_dot_map(png_bytes) -> list[str]`, pure, Pillow): centre-crop, remove
+  the background (pixels within ΔE 12 of the corner median → space), resize to 17 columns × 19
+  rows. Classify the rest into the landing page's characters: `#` hair (the darkest cluster
+  above the face), `.` face (the skin-like cluster in the middle), `+` clothes (anything in the
+  bottom 5 rows that isn't face). Then put `o o` eyes and a `---` mouth at the template
+  positions of `FACES.maya` (row 7, columns 4 and 10; row 10, columns 6–8), only where those
+  cells are face. The output is 19 strings of 17 characters, exactly the `FACES` format. Tests
+  use synthetic Pillow images (a dark-top / skin-middle / light-bottom figure on lavender) and
+  check the shape, the character set and the placement.
+- **Flow:** `POST /api/portrait` `{mode: "words" | "photo", description?, photo?}` → converts all
+  4 images to dot maps **in memory** → returns `{candidates: [map, map, ...]}`, and discards
+  the images. `PUT /api/portrait` `{map}` keeps the chosen one (validated: 19 × 17, only `#.o-+ `).
+  `DELETE /api/portrait` clears it. Limited to `portraits_per_user_per_day` (default 3), else 429.
+- **Where it shows:** the header of `#/people/:id` and `#/me`, drawn on a small patch of the
+  lavender ground with the landing page's `face()` renderer, copied (not edited) into
+  `pwa/vendor/face.js` with a source comment. Blinking follows the landing page, and stops with
+  reduced motion. **The network view and the PersonRings stay rings of pluses** with
+  handwritten names. People with no portrait just have no header picture.
+- Domain/store: `User.portrait: list[str] | None`, `User.portrait_source: "words" | "photo" |
+  None`. `PersonOut` includes `portrait`. `delete_user` clears it.
+- Settings: `minimax_api_key: SecretStr | None`, `minimax_base_url: str = "https://api.minimax.io"`,
+  `portraits_per_user_per_day: int = 3`. `/api/config` gains `portraits_enabled`. `doctor` shows
+  MiniMax as "set (not checked: a check would make an image)", and never calls it.
+- Add `pillow` to the runtime deps.
