@@ -30,7 +30,8 @@
   <div class="wrap">
     <div class="tell">
       <div class="brand big" aria-label="Tacit">tac<span class="bi">i</span>t</div>
-      <!-- EDIT: the lines under the title are chosen in landing.js (TAGLINES). The text here is what shows if scripts are off. -->
+      <!-- EDIT: the tagline lines are chosen in landing.js (TAGLINES). On the first screen they are folded away (the page shows them
+           at the bottom); the one sentence below sits right under the title. To see the lines here again: press H, or add ?hero=lines to the address. -->
       <h1>
         <span>Agents have skills.</span>
         <span>People have taste.</span>
@@ -40,7 +41,6 @@
       <div class="gap" aria-hidden="true"></div>
       <!-- EDIT: one short line: what Tacit is (the team's own wording) -->
       <p class="lead">A community network where you can grow your personal brand and learn from other experts.</p>
-      <button class="btn on-ground" type="button" data-open-join>start with a call</button>
     </div>
   </div>
 
@@ -50,62 +50,85 @@
 <!-- ================================================= 2 · what the network gives you, and one person's page -->
 <section class="person" id="page">
   <div class="wrap person-grid">
-    <!-- EDIT: the example person. Name, one line about her, three skills. -->
+    <!-- EDIT: the example person (invented). The card is short on purpose:
+         portrait, name, one line, three pills, three skills, one button. -->
     <article class="card page" aria-label="An example page: Maya">
-      <!-- the portrait is drawn in landing.js (FACES) from a small map of marks -->
-      <canvas class="face" data-face="maya" aria-hidden="true"></canvas>
-      <p class="nm">Maya</p>
-      <p class="bio">Founder of a six-person startup. Ten years in product.</p>
+      <header class="who">
+        <!-- the portrait is drawn in landing.js (FACES) from a small map of marks -->
+        <canvas class="face" data-face="maya" aria-hidden="true"></canvas>
+        <div>
+          <p class="nm">Maya</p>
+          <p class="at">Founder · San Francisco</p>
+        </div>
+      </header>
+      <p class="pills"><span class="pill">Fundraising</span><span class="pill">Investor updates</span><span class="pill">Product</span></p>
       <ul class="skills">
-        <li class="skill">
-          <p class="st">Open an update with the number</p>
-          <p class="said">&ldquo;They forget the story. They remember 40%.&rdquo;</p>
-        </li>
-        <li class="skill">
-          <p class="st">Give the bad news in the first minute</p>
-          <p class="said">&ldquo;Bad news goes first, or they doubt the rest.&rdquo;</p>
-        </li>
-        <li class="skill">
-          <p class="st">Cut the feature before the deadline does</p>
-          <p class="said">&ldquo;Cut on Monday, or apologise on Friday.&rdquo;</p>
-        </li>
+        <li class="skill">Bad news in the first minute</li>
+        <li class="skill">A maybe is a no</li>
+        <li class="skill">Cut before the deadline does</li>
       </ul>
-      <button class="follow" type="button" aria-pressed="false" data-follow data-on="following · her new skills reach your agent" data-off="follow maya's skills">follow maya's skills</button>
+      <button class="follow" type="button" aria-pressed="false" data-follow data-on="Following Maya" data-off="Follow Maya">Follow Maya</button>
     </article>
 
     <div class="copy">
       <h2>What the network gives you</h2>
-      <!-- EDIT: three short gains for each side. Based on the team's own talk about advice and tacit knowledge. -->
-      <div class="door">
-        <p class="kick">when you learn</p>
-        <ul class="gives">
-          <li><b>A place for the advice people give you.</b> None of it gets lost between conversations.</li>
-          <li><b>What your network recommends.</b> The tools people you trust actually use, and why.</li>
-          <li><b>Their tacit knowledge, working for you.</b> How they really do things, as skills your agent can apply.</li>
-        </ul>
-      </div>
-      <div class="door">
-        <p class="kick">when you explain</p>
-        <ul class="gives">
-          <li><b>A profile that builds itself.</b> From your context and your conversations.</li>
-          <li><b>A personal brand from what you already say.</b> People follow your skills and your advice.</li>
-          <li><b>Your name on everything that travels.</b> Every skill and every piece of advice stays yours.</li>
-        </ul>
-      </div>
+      <!-- EDIT: one sentence. It also says what the card is: an example of a person's profile. -->
+      <p class="lead">Everyone you meet has a profile like Maya's: connect with her and her agent skills.</p>
     </div>
   </div>
 </section>
 
 <!-- ================================================= 3 · the journey: each step lights up and opens as you scroll -->
-<!-- EDIT: the four step titles and the line under step 1 are the team's own words. The lines under steps 2 to 4 are drafts. -->
+<!-- EDIT: the four step titles and the line under step 1 are the team's own words. The lines under steps 2 to 4 are drafts. Each step has one picture beside it. -->
 <section class="how" id="journey">
   <div class="wrap">
     <h2>The journey</h2>
     <ol class="journey" data-journey>
-      <li><b>1</b><h3>Connect your context</h3><p>to give Tacit access to the best knowledge about you</p></li>
-      <li><b>2</b><h3>Have a short conversation with Tacit</h3><p>A phone call. Tacit asks how you work and starts your profile.</p></li>
-      <li><b>3</b><h3>Grow your network</h3><p>Every person you meet can pass you a skill or a piece of advice.</p></li>
-      <li><b>4</b><h3>Learn from people</h3><p>Your agent puts what they told you to work.</p></li>
+      <li><b>1</b>
+        <div class="txt"><h3>Connect your context</h3><p>to give Tacit access to the best knowledge about you</p></div>
+        <!-- EDIT: what a person connects at the start. Each logo is the icon of the product's own site (the "domain" in the address). -->
+        <div class="stage">
+          <div class="shot links" role="list" aria-label="What you connect">
+            <div class="link"><img data-logo src="https://www.google.com/s2/favicons?domain=claude.ai&amp;sz=64" alt="" width="64" height="64"><span>Claude Code</span><i class="tog" aria-hidden="true"></i></div>
+            <div class="link"><img data-logo src="https://www.google.com/s2/favicons?domain=openai.com&amp;sz=64" alt="" width="64" height="64"><span>Codex</span><i class="tog" aria-hidden="true"></i></div>
+            <div class="link"><img data-logo src="https://www.google.com/s2/favicons?domain=linkedin.com&amp;sz=64" alt="" width="64" height="64"><span>LinkedIn</span><i class="tog" aria-hidden="true"></i></div>
+            <div class="link"><img data-logo src="https://www.google.com/s2/favicons?domain=vexoai.com&amp;sz=64" alt="" width="64" height="64"><span>Vexo band</span><i class="tog" aria-hidden="true"></i></div>
+          </div>
+        </div>
+      </li>
+      <li><b>2</b>
+        <div class="txt"><h3>Have a short conversation with Tacit</h3><p>A phone call. Tacit asks how you work and starts your profile.</p></div>
+        <!-- EDIT: the call. One question Tacit asks (a short form of the team's onboarding questions) and the skill it becomes. -->
+        <div class="stage">
+          <div class="shot call" role="img" aria-label="Tacit is on a call with you. It asks what you corrected this week, and your answer becomes a skill.">
+            <div class="top"><i class="dial"></i><div><span class="tw">tacit</span><span class="sub">on a call with you</span></div></div>
+            <div class="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="bubble">&ldquo;What did you correct this week?&rdquo;</div>
+            <div class="made"><span>The ask goes first</span><em>new skill</em></div>
+          </div>
+        </div>
+      </li>
+      <li><b>3</b>
+        <div class="txt"><h3>Grow your network</h3><p>Every person you meet can pass you a skill or a piece of advice.</p></div>
+        <!-- the same living network as on the first screen, in a small box; new people join one by one. It is drawn by landing.js (the names are the first of ALL). -->
+        <div class="stage">
+          <div class="mini tc-stage" data-mini-net role="img" aria-label="Your network grows: it starts with Maya, you and Kai, then more people join one by one, and skills pass between them.">
+            <canvas class="tc-fx" aria-hidden="true"></canvas>
+            <div class="tc-names" aria-hidden="true"></div>
+          </div>
+        </div>
+      </li>
+      <li><b>4</b>
+        <div class="txt"><h3>Learn from people</h3><p>Your agent puts what they told you to work.</p></div>
+        <!-- EDIT: two jobs your agent does, and whose skill it uses for each (invented examples, the same as on the first screen). -->
+        <div class="stage">
+          <div class="shot agent" role="img" aria-label="Your agent writes the investor update with Maya's skill and reviews a pull request with Kai's skill.">
+            <div class="hd"><i></i>your agent</div>
+            <div class="job"><span>Write the investor update</span><div class="use"><strong>Maya</strong>Bad news in the first minute</div></div>
+            <div class="job"><span>Review the pull request</span><div class="use"><strong>Kai</strong>Design before style</div></div>
+          </div>
+        </div>
+      </li>
     </ol>
   </div>
 </section>
@@ -120,8 +143,12 @@
 
 </main>
 
+<!-- the start button stays pinned to the bottom of the window, so it is always in reach; it opens the pop-up -->
+<button class="btn pin" type="button" data-open-join>start with a call</button>
+
 <footer class="foot">
-  <span>Tacit is a prototype, built in one day at VexoHacks, San Francisco, Nov 14, 2026. The people on this page are examples.</span>
+  <!-- EDIT: the line at the very bottom. It must keep saying that the people are examples. -->
+  <span>Made at VexoHacks, San Francisco · Nov 14, 2026 · The people shown are examples.</span>
 </footer>
 
 <!-- ================================================= the pop-up: onboarding starts with a phone call -->
