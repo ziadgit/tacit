@@ -104,3 +104,4 @@ choose to share to the Tacit backend; everyone else learns about them from the b
 ## Gotchas
 
 (Found during the build. Add one line each.)
+- The CSP (`default-src 'self'`) blocks inline scripts, so `pwa/index.html` registers no SW itself: it names `/app/sw.js` + scope in `data-sw`/`data-scope` on the `app.js` script tag, and `app.js` registers it.
