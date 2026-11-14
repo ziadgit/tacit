@@ -37,3 +37,11 @@
 - [x] P2: `tacit gestures record x|figure8 [--sim]` (3 examples → data/gestures.json, used with the built-ins) + tests. Spec: §13.2, §14
 
 ## Discovered
+
+- Stripe Connect payouts to experts (SPEC §10: a later decision; payments today go to the team's test account only).
+- `/api/config` doesn't yet flag Exa/Vapi/Stripe off when the internet is unreachable on a Pi hub (§13.8); they show as enabled and fail with 502 instead.
+- `demonstration` is detected from an explanation during a drawing/whiteboard/making moment; the motion `gesturing` signal feeds only `presenting` on the bridge, not `demonstration` on the server.
+- `walking_meeting` (walking + conversation) is in the catalogue but no detector makes it yet (needs the band's `activity` state on the bridge).
+- The PWA was checked by Python tests only (no browser was opened in the build): click through every screen on a phone before the demo.
+- Fly volumes can mount root-owned while the image runs as uid 10001 (see CLAUDE.md Gotchas).
+- Bridge rate limiting is in memory per server process (fine for the one Fly machine).
