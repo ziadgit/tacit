@@ -156,9 +156,9 @@ def signout() -> Response:
 
 
 def _routers() -> list[APIRouter]:
-    from . import context, interview
+    from . import context, interview, network
 
-    return [core, context.router, interview.router]
+    return [core, context.router, interview.router, network.router]
 
 
 def build_clients(app: FastAPI, settings: Settings) -> None:

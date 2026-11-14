@@ -8,7 +8,7 @@
 - [x] P0: `context.py`: the Exa lookup with exact kwargs, parsing, timeout, consent and rate limit, keep/remove API + tests with a fake Exa. Spec: §6
 - [x] P0: `judge.py`: the Jev questions, `check()`, None on failure + tests with a fake Jev. Spec: §8
 - [x] P0: `interview.py`: `assistant_body`, `NOTE_SKILL_TOOL`, `SYSTEM_PROMPT`, `VapiApi` (create/update assistant, create_call; errors scrubbed), `/api/call` (consent, allowlist, rate limit, one active call), `/api/call/status`, `/vapi/webhook` (secret, tool-calls → draft skill + Jev, status-update, end-of-call-report without storing a transcript, assistant-request for inbound) + tests (respx for Vapi REST). Spec: §7
-- [ ] P0: skills + network API (§9): mine, patch, people, person (followers-only locking), follow/unfollow, feed + tests. Spec: §9
+- [x] P0: skills + network API (§9): mine, patch, people, person (followers-only locking), follow/unfollow, feed + tests. Spec: §9
 - [ ] P0: PWA shell: `pwa/index.html`, `api.js`, `app.js` router, `style.css`, `vendor/` copy, `manifest.webmanifest`, `sw.js`, `scripts/make_icons.py` + PNG icons; screens `#/start`, `#/context`, `#/call`, `#/skills`, `#/me` + the PWA tests. Spec: §12
 - [ ] P0: CLI: `serve`, `vapi-sync [--dry-run]` (secrets masked), new `doctor` rows (secrets set yes/no, allowlist count) + cli tests with CliRunner. Spec: §14
 
