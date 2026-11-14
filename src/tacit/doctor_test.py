@@ -27,5 +27,13 @@ async def test_deepgram_status_reported_without_key():
 
 
 def test_band_sim_uses_configured_number():
-    ok, detail = doctor.check_band_sim(settings(tacit_band=999))
-    assert ok and "Vexo-HACK-999" in detail
+    ok, detail = doctor.check_band_sim(settings(tacit_band=74))
+    assert ok and "Vexo-HACK-74" in detail
+
+
+def test_only_team_bands_are_accepted():
+    import pytest
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        settings(tacit_band=42)

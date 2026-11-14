@@ -33,10 +33,13 @@ Tests live beside the code as `*_test.py`, no network (respx + fakes).
 - **`vexo-open-kit/` is a reference clone: never edit it, never commit it** (gitignored).
   Import its library via `tacit.band.use_kit()`, which puts `vexo-open-kit/python` and
   `vexo-open-kit/examples/python` (`speech.py`, `ai.py`) on `sys.path`.
-- **The band number lives only in `TACIT_BAND`** (`Settings.tacit_band`). Never hard-code a
-  number, never use 42/7 from the kit's examples, never scan for or connect to any other band,
-  never loop over band numbers, never renumber a band. If the band can't be found: double-tap
-  it, close the dashboard/other programs, or use `transport="sim"`.
+- **The team owns two bands: 16 (`Vexo-HACK-16`) and 74 (`Vexo-HACK-74`).** They are listed
+  once, in `tacit.config.TEAM_BANDS`; each laptop picks one with `TACIT_BAND` in `.env`
+  (validated against `TEAM_BANDS`). Never hard-code a number elsewhere, never use 42/7 from the
+  kit's examples, never scan for or connect to any band outside `TEAM_BANDS`, never loop over
+  band numbers, never renumber a band. Each band takes one Bluetooth connection, so one laptop
+  drives one band. If a band can't be found: double-tap it, close the dashboard/other
+  programs, or use `transport="sim"`.
 - Everything is off until `band.configure(...)`; the band resets on disconnect.
 - **No LED while the mic is on** (`audio` or `mic_level`): LED calls fail `denied`.
 - Audio arrives as raw Opus packets (16 kHz mono, 20 ms). `vexo_open.audio.PcmDecoder` for PCM
@@ -44,6 +47,20 @@ Tests live beside the code as `*_test.py`, no network (respx + fakes).
 - One Bluetooth connection at a time: close the dashboard before running code.
 - Keep `speech.listen` and other slow work out of `band.on(...)` handlers.
 - Develop against the pretend band first: `Band.connect(band_no, transport="sim")`.
+
+## Social: how Tacit knows about other bands
+
+The app is social, but **awareness of other bands never happens over Bluetooth.** Each
+person's own Tacit app (on their laptop, connected only to their own band) publishes what they
+choose to share to the Tacit backend; everyone else learns about them from the backend.
+
+- Opt-in only: nothing about a wearer leaves their app unless they turned sharing on, and
+  they can turn it off and delete what was shared.
+- Share derived data (e.g. topics, status, "in a conversation"), not raw audio or full
+  transcripts. Never share data about bystanders the band overheard.
+- Identity is the backend's (a user account linked to a band number by its owner), not
+  "whatever band is nearby". A band number alone is not proof of who someone is.
+- Our two bands (16, 74) are the test pair for every social feature.
 
 ## Privacy (this device listens 24/7)
 

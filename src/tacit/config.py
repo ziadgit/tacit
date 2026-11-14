@@ -3,11 +3,16 @@
 from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# The team's own Vexo bands: the ONLY place band numbers live. Code may connect to these and
+# nothing else. Other people's bands are never scanned for or connected to over Bluetooth;
+# social features learn about them only through our backend, from data their owners share.
+TEAM_BANDS: tuple[int, ...] = (16, 74)
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_ignore_empty=True, extra="ignore")
 
-    # The team's Vexo band number (1..999). The ONE place it lives; never hard-code it.
+    # Which of TEAM_BANDS this laptop drives (each teammate sets their own in .env).
     tacit_band: int | None = None
 
     deepgram_api_key: SecretStr | None = None
@@ -24,8 +29,8 @@ class Settings(BaseSettings):
     @field_validator("tacit_band")
     @classmethod
     def _band_range(cls, v: int | None) -> int | None:
-        if v is not None and not 1 <= v <= 999:
-            raise ValueError("TACIT_BAND must be 1..999 (the number on your band's bag)")
+        if v is not None and v not in TEAM_BANDS:
+            raise ValueError(f"TACIT_BAND must be one of the team's bands {TEAM_BANDS}")
         return v
 
 
@@ -37,5 +42,5 @@ def require(value: SecretStr | None, name: str) -> str:
 
 def require_band(settings: Settings) -> int:
     if settings.tacit_band is None:
-        raise RuntimeError("TACIT_BAND is not set: put your band's number (from its bag) in .env")
+        raise RuntimeError(f"TACIT_BAND is not set: put one of {TEAM_BANDS} in .env")
     return settings.tacit_band
