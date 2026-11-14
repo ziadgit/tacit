@@ -156,10 +156,10 @@ def signout() -> Response:
 
 
 def _routers() -> list[APIRouter]:
-    from . import context, interview, network, payments, portraits
+    from . import bridge_api, context, interview, network, payments, portraits
 
     return [core, context.router, interview.router, network.router, payments.router,
-            portraits.router]
+            portraits.router, bridge_api.router]
 
 
 def build_clients(app: FastAPI, settings: Settings) -> None:
