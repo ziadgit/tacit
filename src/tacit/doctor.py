@@ -103,6 +103,19 @@ CHECKS: dict[str, tuple[str, Callable[..., Awaitable[tuple[bool, str]]]]] = {
 }
 
 
+def settings_rows(s: Settings) -> list[Result]:
+    """Whether each server setting is there: yes/no only, never a value (the allowlist: a count)."""
+    rows = [Result(name, True if getattr(s, field) else None,
+                   "set: yes" if getattr(s, field) else "set: no")
+            for name, field in (("SESSION_SECRET", "session_secret"),
+                                ("VAPI_SERVER_SECRET", "vapi_server_secret"),
+                                ("PUBLIC_BASE_URL", "public_base_url"))]
+    n = len(s.call_allowlist)
+    rows.append(Result("CALL_ALLOWLIST", True if n else None,
+                       f"{n} number{'s' if n != 1 else ''}" if n else "empty: no outbound calls"))
+    return rows
+
+
 async def run(s: Settings) -> list[Result]:
     results: list[Result] = []
     try:
@@ -123,4 +136,4 @@ async def run(s: Settings) -> list[Result]:
             return Result(name, ok, detail)
 
         results += await asyncio.gather(*(one(n, f, fn) for n, (f, fn) in CHECKS.items()))
-    return results
+    return results + settings_rows(s)
