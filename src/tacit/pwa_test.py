@@ -138,3 +138,22 @@ def test_reduced_motion_and_offline_banner():
     assert 'id="offline"' in html and "you're offline" in html
     app = own_js()["app.js"]
     assert "addEventListener('offline'" in app and "navigator.onLine" in app
+
+
+def test_portrait_in_the_pwa():
+    face = (PWA / "vendor" / "face.js").read_text()
+    assert "landing/landing.js" in face.split("\n", 1)[0]
+    landing = (ROOT / "landing" / "landing.js").read_text()
+    body = face[face.index("  function face(cv, rows) {"):face.index("  window.TacitFace")]
+    assert body.strip() in landing  # a copy of face(), not an edit
+    html = (PWA / "index.html").read_text()
+    assert '/app/vendor/face.js' in html
+    app = own_js()["app.js"]
+    assert "capture: 'user'" in app and "accept: 'image/*'" in app
+    assert ("This is a photo of me. Send it to MiniMax to make my picture. "
+            "tacit doesn't keep the photo.") in app
+    assert "photo_consent: true" in app or "body.photo_consent = true" in app
+    assert "PHOTO_MAX_PX = 1024" in app and "localStorage.setItem(LAST_ROUTE" in app
+    # the photo never reaches storage
+    assert app.count("localStorage.setItem") == 1
+    assert "personHeader.push" in app and "m.portrait ? portraitPatch" in app

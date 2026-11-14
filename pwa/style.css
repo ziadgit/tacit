@@ -114,3 +114,14 @@ a.tc-btn { text-decoration: none; }
 .tc-chip.pass.lit b { color: var(--t-lit); }
 .creative { color: var(--t-cap); }
 .only-you { margin-top: 10px !important; font: italic 400 16px/1.2 var(--t-serif); color: var(--t-acc); }
+
+/* the dot portrait: a small patch of the lavender ground (never a photo) */
+.portrait { width: 132px; height: 148px; border-radius: 18px; justify-self: center; }
+.portrait.small { width: 96px; height: 108px; border-radius: 14px; }
+.face-cv { position: relative; z-index: 2; display: block; width: 100%; height: 100%; }
+.candidates { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.candidates > p { flex-basis: 100%; margin: 0; }
+.candidate { padding: 0; border: 2px solid transparent; border-radius: 16px; background: none; cursor: pointer; min-height: 44px; }
+.candidate:focus-visible, .candidate:hover { border-color: var(--t-ink); }
+.picture [aria-pressed=true] { background: var(--t-ink); color: var(--t-paper); }
+.picture input[type=file] { min-height: 44px; font-size: 16px; }

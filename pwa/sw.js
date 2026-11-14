@@ -8,6 +8,7 @@ const SHELL = [
   '/app/style.css',
   '/app/vendor/bundle.css',
   '/app/vendor/bundle.js',
+  '/app/vendor/face.js',
   '/app/icons/icon.svg',
   '/app/icons/icon-192.png',
   '/app/icons/icon-512.png',

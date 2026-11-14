@@ -156,9 +156,10 @@ def signout() -> Response:
 
 
 def _routers() -> list[APIRouter]:
-    from . import context, interview, network, payments
+    from . import context, interview, network, payments, portraits
 
-    return [core, context.router, interview.router, network.router, payments.router]
+    return [core, context.router, interview.router, network.router, payments.router,
+            portraits.router]
 
 
 def build_clients(app: FastAPI, settings: Settings) -> None:
@@ -180,6 +181,10 @@ def build_clients(app: FastAPI, settings: Settings) -> None:
         from .payments import make_payments
 
         st.payments = make_payments(settings)
+    if "portraits" not in st.injected:
+        from .portraits import make_portraits
+
+        st.portraits = make_portraits(settings)
 
 
 def create_app(settings: Settings | None = None, *, store: Store | None = None, exa=None,

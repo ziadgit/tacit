@@ -121,6 +121,9 @@ def settings_rows(s: Settings) -> list[Result]:
             for name, field in (("SESSION_SECRET", "session_secret"),
                                 ("VAPI_SERVER_SECRET", "vapi_server_secret"),
                                 ("PUBLIC_BASE_URL", "public_base_url"))]
+    rows.append(Result("MiniMax", True if s.minimax_api_key else None,
+                       "set (not checked: a check would make an image)" if s.minimax_api_key
+                       else "skipped: MINIMAX_API_KEY not set"))
     n = len(s.call_allowlist)
     rows.append(Result("CALL_ALLOWLIST", True if n else None,
                        f"{n} number{'s' if n != 1 else ''}" if n else "empty: no outbound calls"))

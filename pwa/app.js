@@ -1,13 +1,13 @@
 // tacit PWA: the hash router and the screens. Every piece of API data goes into the page with
 // textContent or attributes, never as markup.
-import { ApiError, del, get, patch, post } from './api.js';
+import { ApiError, del, get, patch, post, put } from './api.js';
 
 const E164 = /^\+[1-9]\d{7,14}$/;
 const TAGLINE = 'agents have skills. people have taste. tacit is how it gets around.';
 const LAST_ROUTE = 'tacit:last-route'; // the only thing kept in localStorage
 const PUBLIC_ROUTES = new Set(['start']);
 
-const state = { me: null, config: null, timers: [], route: null };
+const state = { me: null, config: null, timers: [], stops: [], route: null };
 
 // ---- tiny DOM helpers ------------------------------------------------------------------
 
@@ -72,7 +72,9 @@ function every(ms, fn) {
 
 function clearTimers() {
   for (const id of state.timers) clearInterval(id);
+  for (const stop of state.stops) stop();
   state.timers = [];
+  state.stops = [];
 }
 
 export function domainOf(url) {
@@ -506,6 +508,116 @@ screens.feed = async function feed(root) {
 // Sections other modules of the "me" screen can add (the band, the picture).
 export const meSections = [];
 
+// ---- the dot portrait (SPEC §17): drawn with the landing page's face() on lavender ----------
+
+export function portraitPatch(rows, { small = false } = {}) {
+  const cv = h('canvas', { class: 'face-cv', 'aria-hidden': 'true' });
+  const patch = h('div', { class: `tc-ground portrait${small ? ' small' : ''}`, role: 'img', 'aria-label': 'picture in dots' }, cv);
+  requestAnimationFrame(() => {
+    if (cv.isConnected && window.TacitFace) state.stops.push(window.TacitFace.draw(cv, rows));
+  });
+  return patch;
+}
+
+personHeader.push((p) => (p.portrait ? portraitPatch(p.portrait) : null));
+
+const PHOTO_MAX_PX = 1024;
+const PHOTO_MAX_CHARS = 1500000;
+
+function readAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result));
+    r.onerror = () => reject(new ApiError(0, "That photo couldn't be read."));
+    r.readAsDataURL(file);
+  });
+}
+
+// Shrink a photo to at most 1024 px as a JPEG data URL, in a canvas; it never leaves memory
+// except in the one request to the server.
+export async function shrinkPhoto(file) {
+  const src = await readAsDataURL(file);
+  const img = await new Promise((resolve, reject) => {
+    const i = new Image();
+    i.onload = () => resolve(i);
+    i.onerror = () => reject(new ApiError(0, "That photo couldn't be read."));
+    i.src = src;
+  });
+  const scale = Math.min(1, PHOTO_MAX_PX / Math.max(img.naturalWidth, img.naturalHeight));
+  const cv = document.createElement('canvas');
+  cv.width = Math.max(1, Math.round(img.naturalWidth * scale));
+  cv.height = Math.max(1, Math.round(img.naturalHeight * scale));
+  cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+  for (const q of [0.85, 0.7, 0.5]) {
+    const out = cv.toDataURL('image/jpeg', q);
+    if (out.length <= PHOTO_MAX_CHARS) return out;
+  }
+  throw new ApiError(413, 'That photo is too big.');
+}
+
+function pictureSection() {
+  if (!state.config.portraits_enabled && !state.me.portrait) return null;
+  const card = h('div', { class: 'tc-card form picture' });
+  const candidates = h('div', { class: 'candidates' });
+  let mode = 'words';
+  const words = h('label', {}, h('span', { text: 'how would you like to look?' }),
+    h('textarea', { name: 'description', maxlength: 300, rows: 3, placeholder: 'short curly hair, round glasses, a green jumper' }));
+  const fileInput = h('input', { type: 'file', accept: 'image/*', capture: 'user', name: 'photo' });
+  const consent = h('input', { type: 'checkbox', name: 'photo_consent' });
+  const photo = h('div', { class: 'stack', hidden: true },
+    h('label', {}, h('span', { text: 'a photo of yourself' }), fileInput),
+    h('label', { class: 'check' }, consent,
+      h('span', { text: "This is a photo of me. Send it to MiniMax to make my picture. tacit doesn't keep the photo." })));
+  const pick = (m) => () => {
+    mode = m;
+    words.hidden = false;
+    photo.hidden = m !== 'photo';
+    for (const b of modeRow.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.mode === m));
+  };
+  const modeRow = h('div', { class: 'row' },
+    h('button', { type: 'button', class: 'tc-btn quiet', 'data-mode': 'words', 'aria-pressed': 'true', text: 'from words', onclick: pick('words') }),
+    h('button', { type: 'button', class: 'tc-btn quiet', 'data-mode': 'photo', 'aria-pressed': 'false', text: 'from my photo', onclick: pick('photo') }));
+  const make = h('button', { type: 'button', class: 'tc-btn', text: 'make my picture' });
+  make.addEventListener('click', () => act(make, async () => {
+    const description = words.querySelector('textarea').value.trim();
+    const body = { mode, description: description || null };
+    if (mode === 'photo') {
+      if (!consent.checked) { toast('Tick "This is a photo of me" first.'); return; }
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) { toast('Pick a photo of yourself first.'); return; }
+      body.photo = await shrinkPhoto(file);
+      body.photo_consent = true;
+    } else if (!description) {
+      toast("Describe how you'd like to look."); return;
+    }
+    candidates.replaceChildren(h('p', { class: 'muted-ink', text: 'making four pictures… this can take a minute' }));
+    const out = await post('/api/portrait', body);
+    body.photo = null;
+    fileInput.value = '';
+    candidates.replaceChildren(h('p', { text: 'pick one:' }), ...out.candidates.map((rows) => h('button', {
+      type: 'button', class: 'candidate', 'aria-label': 'use this picture',
+      onclick: (ev) => act(ev.currentTarget, async () => {
+        const kept = await putPortrait(rows, mode);
+        if (kept) { await refreshMe(); render(); }
+      }) }, portraitPatch(rows, { small: true }))));
+  }));
+  card.append(
+    state.me.portrait ? h('div', { class: 'row' }, h('button', { type: 'button', class: 'tc-textlink', text: 'remove my picture',
+      onclick: (ev) => act(ev.currentTarget, async () => { await del('/api/portrait'); await refreshMe(); render(); }) })) : null,
+    state.config.portraits_enabled ? modeRow : null,
+    state.config.portraits_enabled ? words : null,
+    state.config.portraits_enabled ? photo : null,
+    state.config.portraits_enabled ? make : null,
+    candidates);
+  return h('div', { class: 'stack' }, phrase('your picture'), card);
+}
+
+function putPortrait(rows, source) {
+  return put('/api/portrait', { map: rows, source });
+}
+
+meSections.push(pictureSection);
+
 screens.me = function me(root) {
   const m = state.me;
   const toggle = (name, label) => {
@@ -516,6 +628,7 @@ screens.me = function me(root) {
     return h('label', { class: 'check' }, box, h('span', { text: label }));
   };
   root.replaceChildren(
+    m.portrait ? portraitPatch(m.portrait) : null,
     title(firstName(m.name).toLowerCase() || 'me'),
     m.headline ? h('p', { class: 'lede', text: m.headline }) : null,
     h('p', { class: 'counts', text: `${m.counts.published} published · ${m.counts.followers} followers · ${m.counts.following} following` }),
