@@ -394,6 +394,13 @@
     });
   });
 
+  // A product logo is the icon of the product's own site. If it does not load (no network), it is taken away and the name stays.
+  Array.prototype.forEach.call(document.querySelectorAll('img[data-logo]'), function (img) {
+    function drop() { if (img.parentNode) img.parentNode.removeChild(img); }
+    img.addEventListener('error', drop);
+    if (img.complete && !img.naturalWidth) drop();
+  });
+
   Array.prototype.forEach.call(document.querySelectorAll('[data-follow]'), function (button) {
     button.addEventListener('click', function () {
       var on = button.getAttribute('aria-pressed') !== 'true';

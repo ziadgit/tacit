@@ -157,6 +157,12 @@ h2{ font:400 clamp(2rem, 4.3vw, 3.5rem)/1.03 var(--serif); letter-spacing:-.01em
 .js-journey .journey li:not(.on) b{ background:#5A4EA3; color:var(--glyph); box-shadow:inset 0 0 0 2px rgba(255,253,246,.55); }
 .js-journey .journey li:not(.on) p{ opacity:0; transform:translateY(.7rem); }
 .js-journey .journey li.on b{ transform:scale(1.06); }
+/* step 1: what you connect, as paper chips with each product's own logo; they open together with the step */
+.conn{ display:flex; flex-wrap:wrap; gap:.6rem; margin-top:1.1rem; transition:opacity .4s ease, transform .4s ease; }
+.cn{ display:inline-flex; align-items:center; gap:.6rem; padding:.5rem 1.1rem .5rem .55rem; border-radius:2rem; background:var(--paper); color:var(--ink);
+  font:600 1.15rem/1 var(--sans); white-space:nowrap; box-shadow:0 .3rem .9rem rgba(20,16,40,.26); }
+.cn img{ display:block; width:2rem; height:2rem; border-radius:.5rem; }
+.js-journey .journey li:not(.on) .conn{ opacity:0; transform:translateY(.7rem); }
 
 /* ---------- 4 · start with a call ---------- */
 .end{ padding:clamp(3.5rem,8vw,6.5rem) 0 clamp(4rem,9vw,7rem); text-align:center; }
@@ -171,7 +177,7 @@ h2{ font:400 clamp(2rem, 4.3vw, 3.5rem)/1.03 var(--serif); letter-spacing:-.01em
 @media (prefers-reduced-motion:reduce){
   html{ scroll-behavior:auto; }
   .tc-nm.got,.tc-chip.in{ animation:none; }
-  .journey li,.journey b,.journey p{ transition:none; }
+  .journey li,.journey b,.journey p,.conn{ transition:none; }
   .btn{ transition:none; }
 }
 
@@ -197,6 +203,9 @@ h2{ font:400 clamp(2rem, 4.3vw, 3.5rem)/1.03 var(--serif); letter-spacing:-.01em
   .journey li{ padding-left:4.4rem; }
 }
 @media (max-width:560px){
+  .conn{ gap:.5rem; }   /* on a phone the four chips sit two by two */
+  .cn{ gap:.45rem; padding:.42rem .8rem .42rem .45rem; font-size:1.02rem; }
+  .cn img{ width:1.75rem; height:1.75rem; }
   .page{ padding:1.2rem 1.15rem 1.2rem; }
   .face{ right:1.1rem; top:1.2rem; width:7rem; height:7.7rem; }
   .page .bio{ max-width:calc(100% - 7.8rem); }
