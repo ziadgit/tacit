@@ -156,9 +156,9 @@ def signout() -> Response:
 
 
 def _routers() -> list[APIRouter]:
-    from . import context
+    from . import context, interview
 
-    return [core, context.router]
+    return [core, context.router, interview.router]
 
 
 def build_clients(app: FastAPI, settings: Settings) -> None:
@@ -172,6 +172,10 @@ def build_clients(app: FastAPI, settings: Settings) -> None:
         from .judge import make_jev
 
         st.jev = make_jev(settings)
+    if "vapi" not in st.injected and settings.vapi_api_key is not None:
+        from .interview import VapiApi
+
+        st.vapi = VapiApi(settings)
 
 
 def create_app(settings: Settings | None = None, *, store: Store | None = None, exa=None,

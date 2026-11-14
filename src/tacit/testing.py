@@ -17,7 +17,7 @@ def make_settings(**kw) -> Settings:
 def client(tmp_path, settings: Settings | None = None, **clients) -> TestClient:
     settings = settings or make_settings()
     store = clients.pop("store", None) or Store(tmp_path / "t.db")
-    return TestClient(create_app(settings, store=store, **clients), base_url="http://localhost")
+    return TestClient(create_app(settings, store=store, **clients), base_url="https://localhost")
 
 
 def onboard(c: TestClient, phone="+14155550100", name="Maya Lin", **kw) -> dict:
