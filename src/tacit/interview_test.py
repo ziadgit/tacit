@@ -51,8 +51,7 @@ def test_assistant_body():
     assert b["model"]["tools"] == [NOTE_SKILL_TOOL]
     assert b["server"] == {"url": "https://tacit.example/vapi/webhook",
                            "headers": {"x-tacit-secret": SECRET}}
-    assert b["serverMessages"] == ["tool-calls", "status-update", "end-of-call-report",
-                                   "assistant-request"]
+    assert b["serverMessages"] == ["tool-calls", "status-update", "end-of-call-report"]
     assert b["credentials"] == [{"provider": "deepgram", "apiKey": "dgk"}]
     assert "credentials" not in assistant_body(settings())
     m = json.dumps(masked(b))

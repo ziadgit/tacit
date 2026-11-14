@@ -73,8 +73,9 @@ def assistant_body(settings: Settings) -> dict[str, Any]:
                   "messages": [{"role": "system", "content": SYSTEM_PROMPT}],
                   "tools": [NOTE_SKILL_TOOL]},
         "server": {"url": f"{base}/vapi/webhook", "headers": {"x-tacit-secret": secret}},
-        "serverMessages": ["tool-calls", "status-update", "end-of-call-report",
-                           "assistant-request"],
+        # assistant-request is not an assistant server message: Vapi sends it to the phone
+        # number's server URL (inbound), and rejects it here with a 400.
+        "serverMessages": ["tool-calls", "status-update", "end-of-call-report"],
     }
     if settings.deepgram_api_key is not None:
         body["credentials"] = [{"provider": "deepgram",
