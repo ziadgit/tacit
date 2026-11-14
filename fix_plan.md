@@ -3,7 +3,7 @@
 ## P0: onboarding, interview, skills
 
 - [x] P0: scaffold: add deps (`itsdangerous`, `stripe`), root `conftest.py` (autouse: clear Settings env vars, chdir tmp_path), extend `config.py` (+ `call_allowlist` parsing) + config_test, update `.env.example`. Spec: SPEC.md §1
-- [ ] P0: `domain.py` + `store.py` (schema, CRUD, rate-limit events, `delete_user` cascade) + tests. Spec: §2, §3
+- [x] P0: `domain.py` + `store.py` (schema, CRUD, rate-limit events, `delete_user` cascade) + tests. Spec: §2, §3
 - [ ] P0: `auth.py` (session cookie, `current_user`, Origin check, 503 without SESSION_SECRET) + `app.py` skeleton (create_app, lifespan, /healthz, /api/config, CSP, static mounts for `/`, `/design-system/`, `/app/`) + onboarding API (§5) + tests with TestClient. Spec: §4, §5, §11
 - [ ] P0: `context.py`: the Exa lookup with exact kwargs, parsing, timeout, consent and rate limit, keep/remove API + tests with a fake Exa. Spec: §6
 - [ ] P0: `judge.py`: the Jev questions, `check()`, None on failure + tests with a fake Jev. Spec: §8
