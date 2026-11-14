@@ -156,12 +156,18 @@ def signout() -> Response:
 
 
 def _routers() -> list[APIRouter]:
-    routers = [core]
-    return routers
+    from . import context
+
+    return [core, context.router]
 
 
 def build_clients(app: FastAPI, settings: Settings) -> None:
     """Real clients from whatever keys are set, unless a test injected one."""
+    st = app.state
+    if "exa" not in st.injected and settings.exa_api_key is not None:
+        from exa_py import AsyncExa
+
+        st.exa = AsyncExa(settings.exa_api_key.get_secret_value())
 
 
 def create_app(settings: Settings | None = None, *, store: Store | None = None, exa=None,

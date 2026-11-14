@@ -5,7 +5,7 @@
 - [x] P0: scaffold: add deps (`itsdangerous`, `stripe`), root `conftest.py` (autouse: clear Settings env vars, chdir tmp_path), extend `config.py` (+ `call_allowlist` parsing) + config_test, update `.env.example`. Spec: SPEC.md §1
 - [x] P0: `domain.py` + `store.py` (schema, CRUD, rate-limit events, `delete_user` cascade) + tests. Spec: §2, §3
 - [x] P0: `auth.py` (session cookie, `current_user`, Origin check, 503 without SESSION_SECRET) + `app.py` skeleton (create_app, lifespan, /healthz, /api/config, CSP, static mounts for `/`, `/design-system/`, `/app/`) + onboarding API (§5) + tests with TestClient. Spec: §4, §5, §11
-- [ ] P0: `context.py`: the Exa lookup with exact kwargs, parsing, timeout, consent and rate limit, keep/remove API + tests with a fake Exa. Spec: §6
+- [x] P0: `context.py`: the Exa lookup with exact kwargs, parsing, timeout, consent and rate limit, keep/remove API + tests with a fake Exa. Spec: §6
 - [ ] P0: `judge.py`: the Jev questions, `check()`, None on failure + tests with a fake Jev. Spec: §8
 - [ ] P0: `interview.py`: `assistant_body`, `NOTE_SKILL_TOOL`, `SYSTEM_PROMPT`, `VapiApi` (create/update assistant, create_call; errors scrubbed), `/api/call` (consent, allowlist, rate limit, one active call), `/api/call/status`, `/vapi/webhook` (secret, tool-calls → draft skill + Jev, status-update, end-of-call-report without storing a transcript, assistant-request for inbound) + tests (respx for Vapi REST). Spec: §7
 - [ ] P0: skills + network API (§9): mine, patch, people, person (followers-only locking), follow/unfollow, feed + tests. Spec: §9
