@@ -16,7 +16,7 @@ Nothing here comes from anyone's agents. Tag wording, skill titles and "kind" ar
 | | |
 |---|---|
 | based in | Belgrade |
-| company | TripleTen |
+| company | Nebius Group |
 | met at | VexoHacks · Nov 14 |
 | expertise | AI adoption in teams · Voice agents · Agent teams for marketing |
 | worth knowing | Marketer who works with code · Speaks five languages · Made an AI film |
