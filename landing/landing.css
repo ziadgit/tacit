@@ -141,24 +141,24 @@ h2{ font:400 clamp(2rem, 4.3vw, 3.5rem)/1.03 var(--serif); letter-spacing:-.01em
   background:linear-gradient(currentColor,currentColor) center/100% .18rem no-repeat, linear-gradient(currentColor,currentColor) center/.18rem 100% no-repeat; }
 .gives b{ display:block; font:400 1.5rem/1.15 var(--serif); }
 
-/* ---------- 3 · the journey: four steps on a dotted path ---------- */
-.how h2{ margin-bottom:2rem; }
-.journey{ position:relative; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1.8rem; }
-.journey::before{ content:""; position:absolute; left:1.3rem; right:1.3rem; top:1.18rem; border-top:.24rem dotted rgba(255,253,246,.6); }
-.journey li{ position:relative; padding-top:3.7rem; }
-.journey b{ position:absolute; left:0; top:0; display:grid; place-items:center; width:2.6rem; height:2.6rem; border-radius:50%; background:var(--paper); color:var(--ink);
-  font:italic 400 1.5rem/1 var(--serif); box-shadow:0 .3rem .9rem rgba(20,16,40,.28); }
-.journey h3{ font:400 1.75rem/1.1 var(--serif); color:var(--glyph); text-transform:var(--case); text-wrap:balance; text-shadow:0 1px 8px var(--shade); }
-.journey p{ margin-top:.45rem; font:400 1.05rem/1.4 var(--sans); color:var(--glyph); text-shadow:0 1px 8px var(--shade); }
+/* ---------- 3 · the journey: four steps on a dotted path; each lights up and opens as you scroll ---------- */
+.how h2{ margin-bottom:2.4rem; }
+.journey{ --p:1; position:relative; display:grid; gap:2.8rem; max-width:50rem; }
+/* the dotted path, and the part of it you have already walked */
+.journey::before,.journey::after{ content:""; position:absolute; left:calc(1.6rem - .12rem); top:1.6rem; bottom:var(--end, 1.6rem); }
+.journey::before{ border-left:.24rem dotted rgba(255,253,246,.5); }
+.journey::after{ width:.24rem; border-radius:.2rem; background:var(--pollen); transform-origin:top; transform:scaleY(var(--p)); }
+.journey li{ position:relative; padding:.25rem 0 0 5.2rem; min-height:3.2rem; opacity:var(--o,1); transition:opacity .1s linear; }
+.journey b{ position:absolute; z-index:1; left:0; top:0; display:grid; place-items:center; width:3.2rem; height:3.2rem; border-radius:50%; background:var(--paper); color:var(--ink);
+  font:italic 400 1.8rem/1 var(--serif); box-shadow:0 .3rem .9rem rgba(20,16,40,.28); transition:background .3s ease, color .3s ease, transform .3s ease; }
+.journey h3{ font:400 clamp(1.9rem,3.7vw,3rem)/1.06 var(--serif); color:var(--glyph); text-transform:var(--case); text-wrap:balance; text-shadow:0 1px 10px var(--shade); }
+.journey p{ margin-top:.55rem; max-width:34rem; font:400 1.15rem/1.4 var(--sans); color:var(--glyph); text-shadow:0 1px 8px var(--shade); transition:opacity .4s ease, transform .4s ease; }
+/* before a step is reached: the number is hollow and the line under the title is folded away (only when the script is running) */
+.js-journey .journey li:not(.on) b{ background:#5A4EA3; color:var(--glyph); box-shadow:inset 0 0 0 2px rgba(255,253,246,.55); }
+.js-journey .journey li:not(.on) p{ opacity:0; transform:translateY(.7rem); }
+.js-journey .journey li.on b{ transform:scale(1.06); }
 
-/* ---------- 4 · one honest line ---------- */
-.honest{ padding:clamp(1rem,3vw,2.5rem) 0 clamp(3rem,7vw,6rem); }
-.honest .wrap{ display:grid; gap:1.4rem; }
-.honest p{ position:relative; padding-left:2rem; font:italic 400 clamp(1.5rem,2.5vw,2.1rem)/1.15 var(--serif); color:var(--glyph); text-transform:var(--case); text-wrap:balance; text-shadow:0 1px 10px rgba(35,25,90,.5); }
-.honest p::before{ content:""; position:absolute; left:0; top:.32em; width:1rem; height:1rem; color:var(--pollen);
-  background:linear-gradient(currentColor,currentColor) center/100% .2rem no-repeat, linear-gradient(currentColor,currentColor) center/.2rem 100% no-repeat; }
-
-/* ---------- 5 · start with a call ---------- */
+/* ---------- 4 · start with a call ---------- */
 .end{ padding:clamp(3.5rem,8vw,6.5rem) 0 clamp(4rem,9vw,7rem); text-align:center; }
 .end .wrap{ display:flex; flex-direction:column; align-items:center; gap:1.1rem; }
 .line{ font:italic 400 clamp(1.7rem,3.6vw,2.9rem)/1.12 var(--serif); color:var(--glyph); text-transform:var(--case); text-wrap:balance; text-shadow:0 1px 4px rgba(35,25,90,.7), 0 1px 16px rgba(35,25,90,.7); }
@@ -171,6 +171,7 @@ h2{ font:400 clamp(2rem, 4.3vw, 3.5rem)/1.03 var(--serif); letter-spacing:-.01em
 @media (prefers-reduced-motion:reduce){
   html{ scroll-behavior:auto; }
   .tc-nm.got,.tc-chip.in{ animation:none; }
+  .journey li,.journey b,.journey p{ transition:none; }
   .btn{ transition:none; }
 }
 
@@ -192,9 +193,8 @@ h2{ font:400 clamp(2rem, 4.3vw, 3.5rem)/1.03 var(--serif); letter-spacing:-.01em
   .person::before{ background:radial-gradient(90% 26% at 50% 66%, #F4B6D2 0%, rgba(244,182,210,.5) 36%, rgba(244,182,210,0) 72%); }
   .page{ max-width:34rem; }
   .end::before{ background:radial-gradient(100% 42% at 50% 46%, #FFD9A0 0%, rgba(255,217,160,.6) 36%, rgba(255,217,160,0) 72%); }
-  .journey{ grid-template-columns:minmax(0,1fr); gap:1.5rem; }
-  .journey::before{ left:1.18rem; right:auto; top:1.3rem; bottom:1.3rem; border-top:0; border-left:.24rem dotted rgba(255,253,246,.6); }
-  .journey li{ padding:.3rem 0 0 3.7rem; min-height:2.6rem; }
+  .journey{ gap:2.2rem; }
+  .journey li{ padding-left:4.4rem; }
 }
 @media (max-width:560px){
   .page{ padding:1.2rem 1.15rem 1.2rem; }
