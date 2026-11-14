@@ -168,6 +168,10 @@ def build_clients(app: FastAPI, settings: Settings) -> None:
         from exa_py import AsyncExa
 
         st.exa = AsyncExa(settings.exa_api_key.get_secret_value())
+    if "jev" not in st.injected:
+        from .judge import make_jev
+
+        st.jev = make_jev(settings)
 
 
 def create_app(settings: Settings | None = None, *, store: Store | None = None, exa=None,
