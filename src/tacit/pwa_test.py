@@ -157,3 +157,26 @@ def test_portrait_in_the_pwa():
     # the photo never reaches storage
     assert app.count("localStorage.setItem") == 1
     assert "personHeader.push" in app and "m.portrait ? portraitPatch" in app
+
+
+def test_band_screens_and_listening_pill():
+    html = (PWA / "index.html").read_text()
+    assert 'data-screen="moments"' in html and 'href="#/moments"' in html
+    assert 'id="pill"' in html and "hidden" in html.split('id="pill"')[1].split(">")[0]
+    app = own_js()["app.js"]
+    # the pill is blue (tc-pill) only while listening; muted is cream; polled every 5 s
+    assert "s === 'listening' ? 'listen-pill tc-pill'" in app
+    assert "setInterval(pollBand, 5000)" in app
+    assert "if (band.listening) return 'listening'" in app
+    # your band
+    for words in ("Draw an X or a figure 8 in the air to mute.",
+                  "The same again, then a double-tap, to unmute.",
+                  "Double-tap to keep the last minute.", "The token is shown only now.",
+                  "/api/band/pair", "/api/band/mute", "share creative sessions"):
+        assert words in app, words
+    # moments: keep / dismiss / share only for recommendation, lesson, idea
+    assert "new Set(['recommendation', 'lesson', 'idea'])" in app
+    assert "'#/skills', text: 'see the draft skill'" in app
+    # the PWA's own CSS never draws the listening blue itself
+    css = (PWA / "style.css").read_text().upper()
+    assert "#1F5EFF" not in css and "--T-LISTEN" not in css

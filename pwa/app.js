@@ -7,7 +7,10 @@ const TAGLINE = 'agents have skills. people have taste. tacit is how it gets aro
 const LAST_ROUTE = 'tacit:last-route'; // the only thing kept in localStorage
 const PUBLIC_ROUTES = new Set(['start']);
 
-const state = { me: null, config: null, timers: [], stops: [], route: null };
+const state = { me: null, config: null, timers: [], stops: [], route: null, band: null, bands: [16, 74] };
+
+// Parts of the "me" screen added further down (the band, what it notices, the picture).
+export const meSections = [];
 
 // ---- tiny DOM helpers ------------------------------------------------------------------
 
@@ -505,8 +508,197 @@ screens.feed = async function feed(root) {
   );
 };
 
-// Sections other modules of the "me" screen can add (the band, the picture).
-export const meSections = [];
+// ---- the band: moments, "your band", the ListeningPill -------------------------------------
+
+export const KIND_WORDS = {
+  stop_request: 'asked to stop', conversation: 'a conversation', advice_given: 'advice you gave',
+  advice_received: 'advice you got', explanation: 'an explanation', lesson: 'a lesson',
+  question: 'a question you asked', decision: 'a decision', commitment: 'a commitment',
+  recommendation: 'a recommendation', idea: 'an idea', presenting: 'presenting',
+  writing: 'writing', drawing: 'drawing', whiteboard: 'at the whiteboard', typing: 'typing',
+  making: 'making something', walking_meeting: 'a walking meeting', demonstration: 'a demonstration',
+  kept: 'a minute you kept',
+};
+const SHAREABLE = new Set(['recommendation', 'lesson', 'idea']);
+
+function clock(iso) {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+export function hourKey(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}, ${d.toLocaleTimeString([], { hour: '2-digit' })}`;
+}
+
+function momentDetail(m) {
+  const b = m.body || {};
+  const parts = [b.verdict, b.reason && `why: ${b.reason}`, b.what, b.when_text && `when: ${b.when_text}`,
+    b.why && `why: ${b.why}`, b.thing && b.kind ? `${b.kind}` : null, b.idea, b.question,
+    typeof b.minutes === 'number' && b.minutes > 0 ? `${b.minutes} min` : null];
+  return parts.filter((x) => typeof x === 'string' && x).join(' · ');
+}
+
+function momentCard(m) {
+  const card = h('article', { class: `tc-card moment ${m.status}` });
+  const draw = () => {
+    const acts = h('div', { class: 'row' });
+    const set = (status) => (ev) => act(ev.currentTarget, async () => {
+      Object.assign(m, await patch(`/api/moments/${encodeURIComponent(m.id)}`, { status }));
+      draw();
+    });
+    if (m.status !== 'kept') acts.append(h('button', { type: 'button', class: 'tc-btn quiet', text: 'keep', onclick: set('kept') }));
+    if (m.status !== 'dismissed') acts.append(h('button', { type: 'button', class: 'tc-btn quiet', text: 'dismiss', onclick: set('dismissed') }));
+    if (SHAREABLE.has(m.kind) && m.status !== 'shared') {
+      acts.append(h('button', { type: 'button', class: 'tc-btn', text: 'share as a post', onclick: set('shared') }));
+    }
+    if (m.skill_id) acts.append(h('a', { class: 'tc-textlink', href: '#/skills', text: 'see the draft skill' }));
+    const detail = momentDetail(m);
+    card.replaceChildren(
+      h('div', { class: 'top' }, h('span', { class: 'tag-phrase', text: KIND_WORDS[m.kind] || m.kind }),
+        h('span', { class: 'when', text: `${clock(m.started_at)} · ${Math.round((m.confidence || 0) * 100)}% sure` })),
+      m.title && m.title !== KIND_WORDS[m.kind] ? h('h3', { class: 'card-title', text: m.title }) : null,
+      detail ? h('p', { text: detail }) : null,
+      m.status === 'shared' ? h('p', { class: 'only-you', text: 'shared with your followers' }) : h('p', { class: 'only-you', text: 'only you see this' }),
+      acts);
+  };
+  draw();
+  return card;
+}
+
+screens.moments = async function moments(root) {
+  root.replaceChildren(title('your moments'), h('p', { class: 'muted', text: 'loading…' }));
+  const list = (await get('/api/moments')).filter((m) => m.status !== 'dismissed');
+  const groups = [];
+  for (const m of list) {
+    const key = hourKey(m.started_at);
+    if (!groups.length || groups[groups.length - 1].key !== key) groups.push({ key, items: [] });
+    groups[groups.length - 1].items.push(m);
+  }
+  root.replaceChildren(
+    title('your moments'),
+    h('p', { class: 'lede', text: 'What your band noticed. Only you see these, unless you share one.' }),
+    ...(groups.length ? groups.map((g) => h('div', { class: 'stack' }, phrase(g.key), ...g.items.map(momentCard)))
+      : [h('p', { class: 'muted', text: 'Nothing yet. Connect your band in "me".' })]),
+  );
+};
+
+// The ListeningPill: only while the bridge reports "listening". It is the only blue in the app.
+export function pillState(band) {
+  if (!band || !band.connected) return null;
+  if (band.listening) return 'listening';
+  if (band.muted) return 'muted';
+  return null;
+}
+
+function showPill(band) {
+  const pill = $('#pill');
+  const s = pillState(band);
+  pill.hidden = !s;
+  pill.className = s === 'listening' ? 'listen-pill tc-pill' : `listen-pill${s === 'muted' ? ' muted' : ''}`;
+  if (s === 'listening') {
+    pill.replaceChildren(h('span', { class: 'tc-bud', 'aria-hidden': 'true' }, ...Array.from({ length: 9 }, () => h('i'))), 'listening');
+  } else if (s === 'muted') {
+    pill.replaceChildren('muted');
+  } else {
+    pill.replaceChildren();
+  }
+}
+
+async function pollBand() {
+  if (!state.me) { showPill(null); return null; }
+  try {
+    const out = await get('/api/band');
+    state.band = out.band;
+    state.bands = out.bands;
+    showPill(out.band);
+    return out.band;
+  } catch {
+    return state.band || null;
+  }
+}
+
+function bandSection() {
+  const wrap = h('div', { class: 'stack' }, phrase('your band'));
+  const card = h('div', { class: 'tc-card form band' });
+  wrap.append(card);
+  const draw = () => {
+    const b = state.band;
+    if (!b) {
+      const picks = h('div', { class: 'row' }, ...(state.bands || [16, 74]).map((n) => h('button', {
+        type: 'button', class: 'tc-btn quiet', text: `band ${n}`, onclick: (ev) => act(ev.currentTarget, async () => {
+          const out = await post('/api/band/pair', { band: n });
+          await pollBand();
+          draw();
+          card.prepend(tokenBox(out));
+        }) })));
+      card.replaceChildren(h('p', { text: 'Which band is yours? The number is on its bag.' }), picks);
+      return;
+    }
+    const status = !b.online ? 'the bridge is not running' : !b.connected ? 'the bridge can\'t see the band'
+      : b.listening ? 'listening' : b.muted ? 'muted' : 'connected, not listening';
+    card.replaceChildren(
+      h('p', { class: 'band-status' }, h('b', { text: `band ${b.band}: ` }), status,
+        typeof b.battery === 'number' ? ` · battery ${Math.round(b.battery)}%` : ''),
+      h('button', { type: 'button', class: 'tc-btn big', text: b.muted ? 'unmute' : 'mute',
+        'aria-pressed': String(Boolean(b.muted)),
+        onclick: (ev) => act(ev.currentTarget, async () => {
+          const out = await post('/api/band/mute', { muted: !b.muted });
+          state.band = out.band;
+          showPill(out.band);
+          draw();
+        }) }),
+      b.pending ? h('p', { class: 'muted-ink', text: 'sent; the band follows within two seconds' }) : null,
+      h('ul', { class: 'gestures' },
+        h('li', { text: 'Draw an X or a figure 8 in the air to mute.' }),
+        h('li', { text: 'The same again, then a double-tap, to unmute.' }),
+        h('li', { text: 'Double-tap to keep the last minute.' }),
+        h('li', { text: 'Blue light on the band means it is listening. Tell the people around you.' })),
+      twoStep('disconnect this band', 'Disconnect the band? The bridge stops uploading.', (btn) => act(btn, async () => {
+        await del('/api/band');
+        state.band = null;
+        showPill(null);
+        draw();
+      }), 'tc-textlink'));
+  };
+  draw();
+  return wrap;
+}
+
+function tokenBox(out) {
+  const text = out.env.join('\n');
+  return h('div', { class: 'token' },
+    h('p', { text: 'Put these lines in the bridge\'s .env. The token is shown only now.' }),
+    h('pre', { class: 'tc-path', text }),
+    navigator.clipboard ? h('button', { type: 'button', class: 'tc-btn quiet', text: 'copy',
+      onclick: () => navigator.clipboard.writeText(text).then(() => toast('Copied.'), () => {}) }) : null);
+}
+
+function kindsSection() {
+  const off = new Set(state.me.kinds_off || []);
+  const kinds = (state.config.kinds || []).filter((k) => k !== 'stop_request');
+  const boxes = kinds.map((k) => {
+    const box = h('input', { type: 'checkbox', checked: !off.has(k), value: k });
+    box.addEventListener('change', () => act(box, async () => {
+      const now = boxes.filter((b) => !b.checked).map((b) => b.value);
+      state.me = await patch('/api/me', { kinds_off: now });
+    }));
+    return box;
+  });
+  const share = h('input', { type: 'checkbox', checked: Boolean(state.me.share_creative) });
+  share.addEventListener('change', () => act(share, async () => {
+    state.me = await patch('/api/me', { share_creative: share.checked });
+  }));
+  return h('div', { class: 'stack' }, phrase('what the band notices'),
+    h('div', { class: 'tc-card form kinds' },
+      ...boxes.map((b, i) => h('label', { class: 'check' }, b, h('span', { text: KIND_WORDS[kinds[i]] || kinds[i] }))),
+      h('p', { class: 'note', text: 'Anyone saying "stop recording" always mutes the band.' }),
+      h('label', { class: 'check' }, share, h('span', { text: 'share creative sessions ("ana sketched for 25 minutes", nothing more)' }))));
+}
+
+meSections.push(bandSection, kindsSection);
+
 
 // ---- the dot portrait (SPEC §17): drawn with the landing page's face() on lavender ----------
 
@@ -725,6 +917,8 @@ async function boot() {
     location.replace(last && last.startsWith('#/') ? last : '#/start');
   }
   window.addEventListener('hashchange', render);
+  await pollBand();
+  setInterval(pollBand, 5000); // the ListeningPill, on every screen
   render();
 }
 
