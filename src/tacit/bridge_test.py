@@ -433,3 +433,13 @@ def test_gesturing_becomes_presenting_only_with_speech(tmp_path):
     assert b.pending_moments[0]["kind"] == "presenting"
     b.add_session(Session("gesturing", 1000.0, 1100.0, 0.8))   # under 3 minutes
     assert len(b.pending_moments) == 1
+
+
+async def test_bridge_writes_health_file(tmp_path):
+    import json
+
+    r = await rig(tmp_path)
+    await r.bridge.post_state()
+    h = json.loads((tmp_path / "data" / "bridge-health.json").read_text())
+    assert h["band_connected"] and h["listening"] and not h["muted"]
+    await r.close()

@@ -490,7 +490,19 @@ class Bridge:
                 "muted": self.muted, "battery": self.battery, "buffer_mb": self.buffer_mb,
                 "last_sync": iso(self.last_sync) if self.last_sync is not None else None}
 
+    def write_health(self) -> None:
+        """For `/healthz` on the same machine (a Pi hub): what the bridge is doing right now."""
+        st = self.state()
+        health = {"band_connected": st["connected"], "listening": st["listening"],
+                  "muted": st["muted"], "buffer_mb": st["buffer_mb"], "last_sync": st["last_sync"],
+                  "at": time.time()}
+        try:
+            save_state(self.settings.tacit_data_dir / "bridge-health.json", health)
+        except OSError as e:
+            log.info("health file: %s", type(e).__name__)
+
     async def post_state(self) -> None:
+        self.write_health()
         if self.server is None:
             return
         try:

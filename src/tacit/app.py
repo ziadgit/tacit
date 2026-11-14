@@ -88,11 +88,27 @@ class MePatch(BaseModel):
 core = APIRouter()
 
 
+HEALTH_FIELDS = ("band_connected", "listening", "muted", "buffer_mb", "last_sync")
+HEALTH_FRESH_S = 30
+
+
+def bridge_health(settings: Settings) -> dict[str, Any]:
+    """The bridge's fields when one runs on this machine (it writes bridge-health.json)."""
+    import json
+
+    path = settings.tacit_data_dir / "bridge-health.json"
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(data, dict) or time.time() - float(data.get("at") or 0) > HEALTH_FRESH_S:
+        return {}
+    return {k: data.get(k) for k in HEALTH_FIELDS}
+
+
 @core.get("/healthz")
-def healthz(request: Request) -> dict[str, Any]:
-    out: dict[str, Any] = {"status": "ok"}
-    out.update(getattr(request.app.state, "bridge_health", None) or {})
-    return out
+def healthz(settings: SettingsDep) -> dict[str, Any]:
+    return {"status": "ok", **bridge_health(settings)}
 
 
 @core.get("/api/config")

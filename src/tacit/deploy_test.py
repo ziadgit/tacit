@@ -67,3 +67,35 @@ print("ok")
                          timeout=60)
     assert out.returncode == 0, out.stderr
     assert out.stdout.strip().endswith("ok")
+
+
+def test_pi_service_file():
+    svc = (ROOT / "deploy" / "pi" / "tacit-bridge.service").read_text()
+    for line in ("Restart=always", "User=tacit", "WorkingDirectory=/opt/tacit",
+                 "EnvironmentFile=/opt/tacit/.env"):
+        assert f"\n{line}\n" in svc, line
+    assert "ExecStart=/opt/tacit/.venv/bin/tacit bridge" in svc and "--sim" not in svc
+    readme = (ROOT / "deploy" / "pi" / "README.md").read_text()
+    for words in ("uv", "scripts/bootstrap.sh", "systemctl enable", "hostapd", "Bluetooth"):
+        assert words in readme
+
+
+def test_healthz_bridge_fields(tmp_path):
+    import json
+    import time
+
+    from tacit.testing import client, make_settings
+
+    s = make_settings(tacit_data_dir=tmp_path / "data")
+    c = client(tmp_path, s)
+    assert c.get("/healthz").json() == {"status": "ok"}
+    (tmp_path / "data").mkdir()
+    health = {"band_connected": True, "listening": False, "muted": True, "buffer_mb": 1.5,
+              "last_sync": None, "at": time.time()}
+    (tmp_path / "data" / "bridge-health.json").write_text(json.dumps(health))
+    out = c.get("/healthz").json()
+    assert out == {"status": "ok", "band_connected": True, "listening": False, "muted": True,
+                   "buffer_mb": 1.5, "last_sync": None}
+    health["at"] = time.time() - 120                   # stale: the bridge isn't running
+    (tmp_path / "data" / "bridge-health.json").write_text(json.dumps(health))
+    assert c.get("/healthz").json() == {"status": "ok"}
