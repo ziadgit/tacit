@@ -20,7 +20,7 @@ from collections import defaultdict, deque
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field, field_validator
 
 from .auth import current_user, get_settings, get_store
@@ -252,8 +252,16 @@ def bridge_config(dev: Device, store: StoreDep) -> dict[str, Any]:
             "kinds_off": user.kinds_off if user else []}
 
 
+def pipeline(request: Request) -> Any:
+    """The scenario pipeline (§13.4), when the server has one."""
+    return getattr(request.app.state, "scenarios", None)
+
+
 @router.post("/api/bridge/state")
-def bridge_state(body: StateIn, dev: Device, store: StoreDep) -> dict[str, Any]:
+def bridge_state(body: StateIn, request: Request, background: BackgroundTasks, dev: Device,
+                 store: StoreDep) -> dict[str, Any]:
+    if (p := pipeline(request)) is not None:
+        background.add_task(p.tick, dev)
     pending = bool(dev.last_state.get("pending"))
     state = body.model_dump(mode="json")
     state["pending"] = pending
@@ -272,16 +280,9 @@ def bridge_commands(dev: Device, store: StoreDep) -> dict[str, Any]:
     return {"muted": dev.muted, "changed": changed}
 
 
-def on_segments(request: Request, dev: BridgeDevice, segments: list[Segment]) -> None:
-    """Hand new segments to the scenario pipeline (§13.4) when one is set up."""
-    hook = getattr(request.app.state, "on_segments", None)
-    if hook is not None:
-        hook(dev, segments)
-
-
 @router.post("/api/bridge/segments")
-def bridge_segments(body: SegmentsIn, request: Request, dev: Device,
-                    store: StoreDep) -> dict[str, int]:
+def bridge_segments(body: SegmentsIn, request: Request, background: BackgroundTasks,
+                    dev: Device, store: StoreDep) -> dict[str, int]:
     saved = []
     for s in body.segments:
         text = " ".join(s.text.split())
@@ -292,19 +293,14 @@ def bridge_segments(body: SegmentsIn, request: Request, dev: Device,
             device_id=dev.id, user_id=dev.user_id, started_at=s.started_at, ended_at=ended,
             speaker=s.speaker, text=text, level=s.level)))
     log.info("bridge segments: %d", len(saved))
-    on_segments(request, dev, saved)
+    if saved and (p := pipeline(request)) is not None:
+        background.add_task(p.on_segments, dev)
     return {"stored": len(saved)}
 
 
-def on_kept(request: Request, dev: BridgeDevice, moment: Moment) -> None:
-    hook = getattr(request.app.state, "on_kept", None)
-    if hook is not None:
-        hook(dev, moment)
-
-
 @router.post("/api/bridge/moments")
-def bridge_moments(body: MomentsIn, request: Request, dev: Device,
-                   store: StoreDep) -> dict[str, int]:
+def bridge_moments(body: MomentsIn, request: Request, background: BackgroundTasks,
+                   dev: Device, store: StoreDep) -> dict[str, int]:
     user = store.get_user(dev.user_id)
     off = set(user.kinds_off) if user else set()
     stored = 0
@@ -320,8 +316,8 @@ def bridge_moments(body: MomentsIn, request: Request, dev: Device,
             confidence=m.confidence, source="motion", title=KIND_TITLES.get(m.kind, m.kind),
             body={"minutes": int((ended - started).total_seconds() // 60)}))
         stored += 1
-        if m.kind == "kept":
-            on_kept(request, dev, moment)
+        if m.kind == "kept" and (p := pipeline(request)) is not None:
+            background.add_task(p.on_kept, dev, moment)
     log.info("bridge moments: %d", stored)
     return {"stored": stored}
 

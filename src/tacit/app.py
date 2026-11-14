@@ -181,6 +181,14 @@ def build_clients(app: FastAPI, settings: Settings) -> None:
         from .payments import make_payments
 
         st.payments = make_payments(settings)
+    if "llm" not in st.injected:
+        from .llm import make_llm
+
+        st.llm = make_llm(settings)
+    if "scenarios" not in st.injected:
+        from .scenarios import Scenarios
+
+        st.scenarios = Scenarios(st.store, settings, st.jev, st.llm)
     if "portraits" not in st.injected:
         from .portraits import make_portraits
 
@@ -188,10 +196,11 @@ def build_clients(app: FastAPI, settings: Settings) -> None:
 
 
 def create_app(settings: Settings | None = None, *, store: Store | None = None, exa=None,
-               jev=None, vapi=None, payments=None, portraits=None) -> FastAPI:
+               jev=None, vapi=None, payments=None, portraits=None, llm=None,
+               scenarios=None) -> FastAPI:
     settings = settings or Settings()
     injected = {"exa": exa, "jev": jev, "vapi": vapi, "payments": payments,
-                "portraits": portraits}
+                "portraits": portraits, "llm": llm, "scenarios": scenarios}
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):

@@ -130,7 +130,15 @@ def test_segments_and_rewind(tmp_path):
 def test_motion_moments_and_kinds_off(tmp_path):
     store, app, pwa, bridge, uid, token = paired(tmp_path)
     kept = []
-    app.state.on_kept = lambda dev, m: kept.append(m)
+
+    class Pipe:
+        async def on_kept(self, dev, m):
+            kept.append(m)
+
+        async def tick(self, dev):
+            pass
+
+    app.state.scenarios = Pipe()
     pwa.patch("/api/me", json={"kinds_off": ["typing"]})
     t = now()
     body = {"moments": [
