@@ -135,7 +135,11 @@ h2{ font:400 clamp(2rem, 4.3vw, 3.5rem)/1.03 var(--serif); letter-spacing:-.01em
 .follow[aria-pressed="true"]{ background:transparent; color:var(--ink); }
 .follow:focus-visible{ outline-color:var(--acc); }
 .copy{ display:flex; flex-direction:column; gap:1.7rem; }
-.door .lead{ margin-top:.25rem; font:400 clamp(1.5rem,2.4vw,2rem)/1.15 var(--serif); max-width:22em; }
+.gives{ display:grid; gap:.75rem; margin-top:.6rem; max-width:34rem; }
+.gives li{ position:relative; padding-left:1.7rem; font:400 1.04rem/1.4 var(--sans); color:var(--glyph); text-shadow:0 1px 8px var(--shade); }
+.gives li::before{ content:""; position:absolute; left:0; top:.5rem; width:.85rem; height:.85rem; color:var(--pollen);
+  background:linear-gradient(currentColor,currentColor) center/100% .18rem no-repeat, linear-gradient(currentColor,currentColor) center/.18rem 100% no-repeat; }
+.gives b{ display:block; font:400 1.5rem/1.15 var(--serif); }
 
 /* ---------- 3 · the journey: four steps on a dotted path ---------- */
 .how h2{ margin-bottom:2rem; }
