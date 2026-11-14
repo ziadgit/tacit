@@ -25,7 +25,7 @@
 - [x] P1: `gestures.py` (port of the kit recogniser, MUTE_LIMIT / UNMUTE_LIMIT), `scripts/make_gesture_templates.py` + `gesture_templates.json` (x, figure8) + tests with synthetic X / figure 8 / shake / swing / still. Spec: §13.2
 - [x] P1: pairing + bridge API on the server: `BridgeDevice` (token shown once, SHA-256 stored, TEAM_BANDS only), `/api/bridge/state|commands|segments|moments|rewind`, the PWA mute command + tests. Spec: §13.1, §13.2
 - [x] P1: `bridge.py` + `tacit bridge --sim`: connect TACIT_BAND, streams, Deepgram via kit `speech.create(diarize="true")` behind a fake in tests, **mute (gesture, stop phrase, PWA command, LED blink, rewind, saved state)**, unmute (gesture + double-tap), double-tap "keep that", uploads + tests on the pretend band. Spec: §13.1, §13.2
-- [ ] P1: `motion.py` detectors (features, rules, hysteresis sessions) wired into the bridge + tests with synthetic signals. Spec: §13.6
+- [x] P1: `motion.py` detectors (features, rules, hysteresis sessions) wired into the bridge + tests with synthetic signals. Spec: §13.6
 - [ ] P1: `llm.py` (Responses API, json_schema, respx) + `scenarios.py`: segments, wearer guess by level, windows, Jev classification (fake), extraction, quote check, dedup, retention, `stop_request` → mute command + tests. Spec: §13.4
 - [ ] P1: moments, draft skills from conversations, passes (16 ↔ 74), typed `/api/feed`, `/api/moments` + tests. Spec: §13.5
 - [ ] P1: PWA: `#/moments`, the typed `#/feed` (PassChip), `#/me` "your band" (connect, state, mute/unmute, gestures help, per-kind toggles, share creative), ListeningPill + PWA tests. Spec: §12, §13.5

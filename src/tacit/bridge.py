@@ -34,7 +34,7 @@ from typing import Any
 
 import httpx
 
-from . import gestures
+from . import gestures, motion
 from .config import Settings, require, require_band
 
 log = logging.getLogger("tacit.bridge")
@@ -232,7 +232,9 @@ class Bridge:
         self.pending_segments: list[dict[str, Any]] = []
         self.pending_moments: list[dict[str, Any]] = []
         self.pending_rewind = 0
-        self.motion_sinks: list[Callable[[Any], None]] = []   # motion detectors (§13.6)
+        self.motion = motion.SessionTracker()                  # motion detectors (§13.6)
+        self.gesturing: list[motion.Session] = []
+        self.speech_windows: deque[float] = deque(maxlen=2000)  # when final speech arrived
         self.tasks: set[asyncio.Task] = set()
         self._last_poll = float("-inf")
         self._last_state = float("-inf")
@@ -351,8 +353,27 @@ class Bridge:
         label = self.detector.feed(m, now=getattr(m, "t", None))   # the gesture check comes first
         if label is not None:
             self.on_gesture(label, self.detector.last.distance if self.detector.last else 1.0)
-        for sink in self.motion_sinks:
-            sink(m)
+        t = getattr(m, "time", None)
+        t = float(t) if isinstance(t, int | float) else self.clock()
+        self.last_motion_t = t
+        for session in self.motion.feed(m, t, speech_active=self.speech_active(t)):
+            self.add_session(session)
+
+    def speech_active(self, t: float) -> bool:
+        return bool(self.speech_windows) and t - self.speech_windows[-1] <= 10.0
+
+    def add_session(self, s: motion.Session) -> None:
+        """Only {kind, started_at, ended_at, confidence} leaves the bridge; raw motion never."""
+        kind = s.kind
+        if kind == "gesturing":
+            # gesturing feeds `presenting`: >= 3 min of it while speech kept coming
+            spoke = [t for t in self.speech_windows if s.started_at <= t <= s.ended_at]
+            minutes = (s.ended_at - s.started_at) / 60
+            if minutes < 3 or len(spoke) < minutes * 3:
+                return
+            kind = "presenting"
+        self.pending_moments.append({"kind": kind, "started_at": iso(s.started_at),
+                                     "ended_at": iso(s.ended_at), "confidence": s.confidence})
 
     def on_gesture(self, label: str, distance: float) -> None:
         if not self.muted:
@@ -412,6 +433,7 @@ class Bridge:
             if STOP_PHRASE.search(p.text):
                 await self.mute("someone asked to stop")
                 return
+            self.speech_windows.append(p.ended)
             self.pending_segments.append({
                 "started_at": iso(p.started), "ended_at": iso(p.ended), "speaker": p.speaker,
                 "text": p.text, "level": self.level_for(p.started, p.ended), "_ended": p.ended})
@@ -489,6 +511,8 @@ class Bridge:
     async def close(self) -> None:
         for task in list(self.tasks):
             await task
+        for session in self.motion.flush(getattr(self, "last_motion_t", self.clock())):
+            self.add_session(session)
         if self.ears is not None:
             _stop_quietly(self.ears)
             self.ears = None

@@ -400,3 +400,33 @@ def test_cli_bridge_needs_band(monkeypatch):
 
     r = CliRunner().invoke(cli.app, ["bridge", "--sim"])
     assert r.exit_code == 1 and "TACIT_BAND" in r.output
+
+
+async def test_motion_sessions_are_uploaded_as_summaries(tmp_path):
+    from tacit.motion_test import synthetic
+
+    r = await rig(tmp_path)
+    r.sim.play_motion(list(synthetic("drawing", 150)))
+    for _ in range(150):
+        await r.advance(1000, step=1000)
+    await r.bridge.close()
+    moments = [m for batch in r.server.named("moments") for m in batch]
+    assert [m["kind"] for m in moments] == ["drawing"]
+    assert set(moments[0]) == {"kind", "started_at", "ended_at", "confidence"}
+    assert not r.bridge.muted            # drawing never looks like the mute gesture
+    await r.band.disconnect()
+
+
+def test_gesturing_becomes_presenting_only_with_speech(tmp_path):
+    from tacit.motion import Session
+
+    b = br.Bridge.__new__(br.Bridge)
+    b.pending_moments = []
+    b.speech_windows = __import__("collections").deque()
+    b.add_session(Session("gesturing", 1000.0, 1300.0, 0.8))
+    assert b.pending_moments == []
+    b.speech_windows.extend(1000.0 + 10 * i for i in range(30))
+    b.add_session(Session("gesturing", 1000.0, 1300.0, 0.8))
+    assert b.pending_moments[0]["kind"] == "presenting"
+    b.add_session(Session("gesturing", 1000.0, 1100.0, 0.8))   # under 3 minutes
+    assert len(b.pending_moments) == 1
