@@ -1,0 +1,30 @@
+<!-- @dsCard group="Pieces" height=150 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>listening pill</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist+Pixel:ELSH@0..100&display=swap" rel="stylesheet">
+<style>
+html,body{ margin:0; }
+.row{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); height:150px; }
+.half{ display:grid; place-items:center; align-content:center; gap:12px; text-align:center; }
+.flat.tc-ground{ background-image:linear-gradient(160deg,var(--ground-top,#6A5FB3) 0%,var(--ground-mid,#9A8EDB) 46%,var(--ground-deep,#584C9E) 100%); }
+.paper{ background:var(--t-paper); color:var(--t-ink); }
+.half p{ margin:0; font:italic 400 16px/1.2 var(--t-serif); }
+.band{ width:74px; height:26px; border-radius:13px; background:#1B1C22; display:grid; place-items:center; margin:0 auto; }
+.band i{ width:10px; height:10px; border-radius:50%; background:var(--t-listen); box-shadow:0 0 0 3px rgba(31,94,255,.35), 0 0 12px var(--t-listen); }
+</style>
+<link rel="stylesheet" href="../bundle.css">
+<script src="../bundle.js"></script>
+</head>
+<body>
+<div class="row">
+  <div class="half tc-ground"><div class="tc-above"><div class="tc-pill"><span class="tc-bud"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>Listening</div></div></div>
+  <div class="half paper"><div class="tc-pill"><span class="tc-bud"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>Listening</div><p>on paper</p></div>
+  <div class="half tc-ground flat"><div class="tc-above"><span class="band"><i></i></span><p style="margin-top:12px">the same blue as the light on the band</p></div></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!-- @dsCard height=288 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>tacit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist+Pixel:ELSH@0..100&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; height:100%; }
+  body { background:var(--ground-deep,#584C9E); color:var(--glyph,#FFFDF6); overflow:hidden; }
+  .cover { position:relative; height:288px; overflow:hidden; }
+  .art { position:absolute; top:0; left:480px; width:480px; height:288px; overflow:hidden; }
+  .art svg { display:block; width:480px; height:288px; }
+  .peach { fill:var(--glow-peach,#FFD9A0); }
+  .night { fill:var(--glow-night,#3D3580); }
+  .paper { fill:var(--paper,#FBF6EC); }
+  .lit { fill:var(--lit,#FF6A3D); }
+  .listen { fill:var(--listen,#1F5EFF); }
+  .deep { fill:var(--ground-deep,#584C9E); }
+  .cap { fill:var(--cap,#F6EEFF); }
+  .cream { fill:var(--glyph,#FFFDF6); }
+  .blk { rx:var(--radius-card,22px); }
+  .sm { rx:var(--radius-stage,14px); }
+  .words { position:absolute; left:32px; bottom:28px; max-width:440px; }
+  .name { margin:0; font-family:"Geist Pixel",ui-monospace,monospace; font-variation-settings:"ELSH" 50; font-weight:400; font-size:120px; line-height:.9; color:var(--glyph,#FFFDF6); }
+  .tag { margin:10px 0 0 4px; font:italic 400 14px/20px "Instrument Serif",Georgia,serif; color:var(--cap,#F6EEFF); }
+</style>
+<link rel="stylesheet" href="../bundle.css">
+<script src="../bundle.js"></script>
+</head>
+<body>
+<div class="cover">
+<div class="art" aria-hidden="true">
+<svg viewBox="0 0 480 288" width="480" height="288">
+<!--
+  blocks      glow-peach 176x280 bled off the top (the warm glow, the largest) · glow-night 136x192 · paper 136x128 bleeding off the right edge · lit 40x40 and listen 40x40 once each (they only ever mean a state) on ground-deep
+  arrangement one tall peach slab with satellites, bottoms on one line three cells above the edge, two-cell gutters
+  pattern     the plus grid, from "every drawing is made of a dot, a dash and a plus on one grid": a person's ring of pluses in ground-deep on the peach, a patch of cap dots on the night block, four glyph pluses on the ground
+  scales      pitch two and three cells (cell = 8px); corners radius-card, small blocks radius-stage, the listen disc half its side
+-->
+<rect class="peach blk" x="24" y="-16" width="176" height="280" rx="22"/>
+<rect class="night blk" x="216" y="72" width="136" height="192" rx="22"/>
+<rect class="paper blk" x="368" y="40" width="136" height="128" rx="22"/>
+<rect class="lit sm" x="368" y="184" width="40" height="40" rx="14"/>
+<rect class="listen" x="424" y="184" width="40" height="40" rx="20"/>
+<path class="deep" d="M59 111h10v2h-10z M63 107h2v10h-2z"/><path class="deep" d="M59 127h10v2h-10z M63 123h2v10h-2z"/><path class="deep" d="M59 143h10v2h-10z M63 139h2v10h-2z"/><path class="deep" d="M75 95h10v2h-10z M79 91h2v10h-2z"/><path class="deep" d="M75 159h10v2h-10z M79 155h2v10h-2z"/><path class="deep" d="M91 79h10v2h-10z M95 75h2v10h-2z"/><path class="deep" d="M91 175h10v2h-10z M95 171h2v10h-2z"/><path class="deep" d="M107 79h10v2h-10z M111 75h2v10h-2z"/><path class="deep" d="M107 175h10v2h-10z M111 171h2v10h-2z"/><path class="deep" d="M123 79h10v2h-10z M127 75h2v10h-2z"/><path class="deep" d="M123 175h10v2h-10z M127 171h2v10h-2z"/><path class="deep" d="M139 95h10v2h-10z M143 91h2v10h-2z"/><path class="deep" d="M139 159h10v2h-10z M143 155h2v10h-2z"/><path class="deep" d="M155 111h10v2h-10z M159 107h2v10h-2z"/><path class="deep" d="M155 127h10v2h-10z M159 123h2v10h-2z"/><path class="deep" d="M155 143h10v2h-10z M159 139h2v10h-2z"/><path class="deep" d="M106 126h12v4h-12z M110 122h4v12h-4z"/>
+<rect class="cap" x="234" y="94" width="4" height="4"/><rect class="cap" x="258" y="94" width="4" height="4"/><rect class="cap" x="282" y="94" width="4" height="4"/><rect class="cap" x="306" y="94" width="4" height="4"/><rect class="cap" x="330" y="94" width="4" height="4"/><rect class="cap" x="234" y="118" width="4" height="4"/><rect class="cap" x="258" y="118" width="4" height="4"/><rect class="cap" x="282" y="118" width="4" height="4"/><rect class="cap" x="306" y="118" width="4" height="4"/><rect class="cap" x="330" y="118" width="4" height="4"/><rect class="cap" x="234" y="142" width="4" height="4"/><rect class="cap" x="258" y="142" width="4" height="4"/><rect class="cap" x="282" y="142" width="4" height="4"/><rect class="cap" x="306" y="142" width="4" height="4"/><rect class="cap" x="330" y="142" width="4" height="4"/><rect class="cap" x="234" y="166" width="4" height="4"/><rect class="cap" x="258" y="166" width="4" height="4"/><rect class="cap" x="282" y="166" width="4" height="4"/><rect class="cap" x="306" y="166" width="4" height="4"/><rect class="cap" x="330" y="166" width="4" height="4"/><rect class="cap" x="234" y="190" width="4" height="4"/><rect class="cap" x="258" y="190" width="4" height="4"/><rect class="cap" x="282" y="190" width="4" height="4"/><rect class="cap" x="306" y="190" width="4" height="4"/><rect class="cap" x="330" y="190" width="4" height="4"/><rect class="cap" x="234" y="214" width="4" height="4"/><rect class="cap" x="258" y="214" width="4" height="4"/><rect class="cap" x="282" y="214" width="4" height="4"/><rect class="cap" x="306" y="214" width="4" height="4"/><rect class="cap" x="330" y="214" width="4" height="4"/><rect class="cap" x="234" y="238" width="4" height="4"/><rect class="cap" x="258" y="238" width="4" height="4"/><rect class="cap" x="282" y="238" width="4" height="4"/><rect class="cap" x="306" y="238" width="4" height="4"/><rect class="cap" x="330" y="238" width="4" height="4"/>
+<path class="cream" d="M375 247h10v2h-10z M379 243h2v10h-2z"/><path class="cream" d="M399 247h10v2h-10z M403 243h2v10h-2z"/><path class="cream" d="M423 247h10v2h-10z M427 243h2v10h-2z"/><path class="cream" d="M447 247h10v2h-10z M451 243h2v10h-2z"/>
+</svg>
+</div>
+<div class="words">
+<p class="name"><span class="tc-word" style="padding:0;font-size:inherit;line-height:inherit">tac<span class="bi">i</span>t</span></p>
+<p class="tag">agents have skills. people have taste. tacit is how it gets around.</p>
+</div>
+</div>
+</body>
+</html>

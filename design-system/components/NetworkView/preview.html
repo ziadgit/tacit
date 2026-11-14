@@ -1,0 +1,38 @@
+<!-- @dsCard group="Pieces" height=640 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>network view</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist+Pixel:ELSH@0..100&display=swap" rel="stylesheet">
+<style>
+html,body{ margin:0; }
+body{ background:var(--t-paper); padding:14px; }
+.bar{ display:flex; align-items:center; gap:8px; margin-top:12px; font:italic 400 17px/1 var(--t-serif); color:var(--t-ink); }
+.bar button{ font:600 14px/1 var(--t-sans); padding:8px 13px; border-radius:10px; border:1.5px solid var(--t-ink); background:transparent; color:var(--t-ink); cursor:pointer; }
+.bar button[aria-pressed="true"]{ background:var(--t-ink); color:var(--t-paper); }
+</style>
+<link rel="stylesheet" href="../bundle.css">
+<script src="../bundle.js"></script>
+</head>
+<body>
+<div class="tc-ground tc-stage sm" id="st">
+  <canvas class="tc-fx"></canvas><div class="tc-labs"></div><div class="tc-names"></div>
+  <span class="tc-word">tac<span class="bi">i</span>t</span>
+  <div class="tc-pill"><span class="tc-bud"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>Listening</div>
+  <div class="tc-chip"></div>
+</div>
+<div class="bar"><span>people in the network</span><button data-k="3" aria-pressed="false">3</button><button data-k="5" aria-pressed="true">5</button><button data-k="12" aria-pressed="false">12</button></div>
+<script>
+(function(){
+var st=document.getElementById('st'), m=Tacit.field(st.querySelector('canvas'),st,{K:5,cell:8});
+Tacit.run(m,Tacit.TICK,st);
+document.addEventListener('click',function(e){ var b=e.target.closest?e.target.closest('button[data-k]'):null; if(!b) return;
+  var bs=b.parentNode.querySelectorAll('button'); for(var i=0;i<bs.length;i++) bs[i].setAttribute('aria-pressed',bs[i]===b?'true':'false');
+  m.set(+b.getAttribute('data-k')); });
+})();
+</script>
+</body>
+</html>

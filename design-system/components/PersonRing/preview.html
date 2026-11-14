@@ -1,0 +1,50 @@
+<!-- @dsCard group="Pieces" height=250 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>a person</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist+Pixel:ELSH@0..100&display=swap" rel="stylesheet">
+<style>
+html,body{ margin:0; }
+.wrap{ height:250px; --glow-size:30% 70%; --glow-at:74% 44%; }
+.cap{ position:absolute; z-index:2; bottom:14px; margin:0; font:italic 400 16px/1.2 var(--t-serif); color:var(--t-cap); text-shadow:0 1px 8px var(--t-shade); }
+.cap.a{ left:5%; width:46%; }
+.cap.b{ left:58%; width:38%; }
+</style>
+<link rel="stylesheet" href="../bundle.css">
+<script src="../bundle.js"></script>
+</head>
+<body>
+<div class="tc-ground wrap tc-stage sm" id="st" style="border-radius:0">
+  <canvas class="tc-fx"></canvas><div class="tc-names"></div>
+  <p class="cap a">the more a person has given, the larger the ring</p>
+  <p class="cap b">while a skill passes, both turn orange and the spot between them lights up</p>
+</div>
+<script>
+(function(){
+var st=document.getElementById('st'), cv=st.querySelector('canvas'), box=st.querySelector('.tc-names'), s=8;
+var people=[{n:'Maya',x:.12,w:1},{n:'You',x:.29,w:.5},{n:'Kai',x:.44,w:.3},{n:'Lena',x:.68,w:.8,hot:1},{n:'Omar',x:0,w:.55,hot:1}];
+function draw(){
+  var p=Tacit.pen(cv,s), W=p.W, H=p.H, y=Tacit.snap(H*0.36,s), hot=[], i;
+  people.forEach(function(q){ q.rho=s*(1.9+1.2*q.w); });
+  var A=people[3], B=people[4], gp=A.rho+B.rho+s*2, gp2=gp*gp*0.75;
+  people.forEach(function(q,k){ q.sx=Tacit.snap(k===4?W*A.x+gp:W*q.x,s); q.sy=y; });
+  for(var gy=s/2;gy<H;gy+=s) for(var gx=s/2;gx<W;gx+=s){ var skip=false, dA=1e9, dB=1e9;
+    for(i=0;i<people.length;i++){ var q=people[i], dx=gx-q.sx, dy=gy-q.sy, d2=dx*dx+dy*dy, r=q.rho+s*0.9; if(d2<r*r){ skip=true; break; } if(i===3) dA=d2; if(i===4) dB=d2; }
+    if(skip) continue;
+    if(dA<gp2&&dB<gp2){ hot.push(gx,gy,0.7); continue; }
+    if((Math.round((gx-s/2)/s)+Math.round((gy-s/2)/s))&1) continue; p.ctx.globalAlpha=.3; p.put(gx,gy,0.12); }
+  p.ctx.globalAlpha=1; box.textContent='';
+  people.forEach(function(q){ Tacit.ring(p.put,q.sx,q.sy,q.rho,s,q.hot?hot:null);
+    var b=document.createElement('b'); b.className='tc-nm'; b.textContent=q.n; b.style.left=q.sx+'px'; b.style.top=Math.round(q.sy+q.rho+s*0.3)+'px'; b.style.transform='translate(-50%,0)'; box.appendChild(b); });
+  Tacit.drawHot(p.ctx,p.put,hot,p.lit);
+}
+draw(); window.addEventListener('resize',draw);
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(draw);
+})();
+</script>
+</body>
+</html>

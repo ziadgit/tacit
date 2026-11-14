@@ -1,0 +1,74 @@
+<!-- @dsCard group="Rules" height=950 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>do and do not</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist+Pixel:ELSH@0..100&display=swap" rel="stylesheet">
+<style>
+html,body{ margin:0; }
+body{ background:var(--t-paper); color:var(--t-ink); padding:16px; }
+.g{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px 12px; }
+.hd{ font:italic 400 24px/1 var(--t-serif); padding:2px 2px 4px; }
+.t{ position:relative; height:128px; border-radius:16px; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between; padding:12px 14px 11px; }
+.t.pp{ background:#fff; box-shadow:inset 0 0 0 1px rgba(40,36,60,.16); }
+.t.no{ opacity:.9; }
+.t.no::before{ content:""; position:absolute; z-index:4; inset:0; border-radius:16px; border:2px dashed rgba(35,30,61,.55); pointer-events:none; }
+.t.tc-ground.no::before{ border-color:rgba(255,253,246,.75); }
+.flat.tc-ground{ background-image:linear-gradient(160deg,var(--ground-top,#6A5FB3) 0%,var(--ground-mid,#9A8EDB) 46%,var(--ground-deep,#584C9E) 100%); }
+.v{ position:relative; z-index:2; flex:1; display:flex; align-items:center; gap:14px; min-height:0; }
+.c{ position:relative; z-index:2; margin:0; font:400 13px/1.3 var(--t-sans); }
+.tc-ground .c{ color:var(--t-glyph); text-shadow:0 1px 6px var(--t-shade); }
+.x{ text-decoration:line-through; text-decoration-thickness:2px; }
+.lbl{ font:500 12px/1 var(--t-mono); letter-spacing:.12em; text-transform:uppercase; color:var(--t-acc2); }
+.ser{ font:400 34px/1 var(--t-serif); }
+.phr{ font:italic 400 24px/1.1 var(--t-serif); }
+.hw{ font:700 34px/1 var(--t-hand); }
+.hq{ font:600 24px/1.1 var(--t-hand); color:var(--t-acc); }
+.bluebtn{ font:600 15px/1 var(--t-sans); padding:12px 16px; border-radius:14px; background:var(--t-listen); color:#fff; }
+.bluelink{ font:500 15px/1 var(--t-sans); color:var(--t-listen); text-decoration:underline; }
+.t canvas{ position:absolute; inset:0; width:100%; height:100%; color:var(--t-glyph); }
+.t .tc-nm{ position:absolute; z-index:2; font-size:26px; }
+.t.tall{ height:176px; }
+.t.tall canvas{ height:118px; }
+</style>
+<link rel="stylesheet" href="../bundle.css">
+<script src="../bundle.js"></script>
+</head>
+<body>
+<div class="g">
+  <div class="hd">do</div><div class="hd">do not</div>
+
+  <div class="t pp"><div class="v"><span class="ser">a skill from <span class="hw">Maya</span></span></div><p class="c">The unit is a skill.</p></div>
+  <div class="t pp no"><div class="v"><span class="ser x">move 007</span></div><p class="c">"Move" confuses a first-time viewer.</p></div>
+
+  <div class="t pp"><div class="v"><span class="phr">what maya never wrote down</span></div><p class="c">Section headings are plain phrases in italic serif.</p></div>
+  <div class="t pp no"><div class="v"><span class="lbl">Skills &middot; 5</span><span class="lbl">How Maya thinks</span></div><p class="c">Small capital labels, numbered "01" markers.</p></div>
+
+  <div class="t pp"><div class="v"><span class="ser">the network</span></div><p class="c">Titles and the word tacit in lower case.</p></div>
+  <div class="t pp no"><div class="v"><span class="ser x">The Network</span></div><p class="c">Capitalised titles.</p></div>
+
+  <div class="t tc-ground flat"><div class="v"><div class="tc-pill"><span class="tc-bud"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>Listening</div></div><p class="c">Blue means the band is listening. Orange means a skill is passing.</p></div>
+  <div class="t pp no"><div class="v"><span class="bluebtn">Follow</span><span class="bluelink">see all skills</span></div><p class="c">Blue or orange as a button, a link or decoration.</p></div>
+
+  <div class="t tall tc-ground flat"><canvas id="ok"></canvas><b class="tc-nm" style="left:50%;top:58px;transform:translate(-50%,0)">Maya</b><div class="v"></div><p class="c">A person is a small ring with a handwritten name. A group is a word and denser dots.</p></div>
+  <div class="t tall tc-ground flat no"><canvas id="bad"></canvas><div class="v"></div><p class="c">People as flowers or petals, big overlapping circles, tiles, braided threads, an outline around a group.</p></div>
+
+  <div class="t pp"><div class="v"><span class="hq">&ldquo;Short. Concrete. One number first.&rdquo;</span></div><p class="c">Handwriting only for a person: their name, their own words.</p></div>
+  <div class="t pp no"><div class="v"><span class="hw x">Your profile</span></div><p class="c">Handwriting for headings, buttons or anything the product says.</p></div>
+</div>
+<script>
+(function(){
+function draw(){
+  var a=document.getElementById('ok'), p=Tacit.pen(a,8), x=Tacit.snap(p.W/2,8), y=Tacit.snap(32,8);
+  for(var gy=4;gy<p.H;gy+=8) for(var gx=4;gx<p.W;gx+=8){ var d=(gx-x)*(gx-x)+(gy-y)*(gy-y); if(d<30*30) continue; if(d>64*64){ if(((gx-4)/8+(gy-4)/8)&1) continue; p.ctx.globalAlpha=.3; } else p.ctx.globalAlpha=.85; p.put(gx,gy,0.12); }
+  p.ctx.globalAlpha=1; Tacit.ring(p.put,x,y,22,8);
+  var b=Tacit.bloom(document.getElementById('bad'),{seed:'no',petals:6,rot:0.3,cell:6,cx:0.5,cy:0.5,r:0.44}); b.full();
+}
+draw(); window.addEventListener('resize',draw);
+})();
+</script>
+</body>
+</html>

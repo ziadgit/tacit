@@ -1,0 +1,48 @@
+<!-- @dsCard group="Foundations" height=292 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>colour meaning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist+Pixel:ELSH@0..100&display=swap" rel="stylesheet">
+<style>
+html,body{ margin:0; }
+body{ background:var(--t-paper); color:var(--t-ink); }
+.grid{ display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:12px; padding:16px; }
+.sw{ position:relative; height:150px; border-radius:16px; display:grid; place-items:center; }
+.flat.tc-ground{ background-image:linear-gradient(160deg,var(--ground-top,#6A5FB3) 0%,var(--ground-mid,#9A8EDB) 46%,var(--ground-deep,#584C9E) 100%); }
+.sw.pp{ background:var(--t-paper); box-shadow:inset 0 0 0 1px rgba(40,36,60,.18); color:var(--t-ink); align-content:center; gap:8px; }
+.sw.pp b{ font:400 34px/1 var(--t-serif); }
+.sw.pp span{ font:600 13px/1 var(--t-sans); background:var(--t-acc); color:#fff; border-radius:8px; padding:5px 8px; }
+h4{ margin:10px 0 3px; font:400 22px/1.05 var(--t-serif); text-transform:lowercase; }
+p{ margin:0; font:400 13px/1.35 var(--t-sans); }
+.tc-confirm{ margin-top:6px; color:var(--t-acc); }
+</style>
+<link rel="stylesheet" href="../bundle.css">
+<script src="../bundle.js"></script>
+</head>
+<body>
+<div class="grid">
+  <div><div class="sw tc-ground flat"></div><h4>lavender ground</h4><p>The room everything happens in. Always the gradient, always with grain.</p></div>
+  <div><div class="sw tc-ground"></div><h4>peach glow</h4><p>Warmth behind the one thing that matters on a screen.</p></div>
+  <div><div class="sw tc-ground flat"><canvas class="tc-fx" id="c1"></canvas></div><h4>cream</h4><p>Everything drawn or written on the ground.</p></div>
+  <div><div class="sw tc-ground flat"><div class="tc-above"><div class="tc-pill"><span class="tc-bud"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>Listening</div></div></div><h4>blue</h4><p>Listening, and nothing else. The same blue as the light on the band.</p></div>
+  <div><div class="sw tc-ground"><canvas class="tc-fx" id="c2"></canvas></div><h4>orange</h4><p>A skill is passing right now. Off again when it has arrived.</p><span class="tc-confirm">to confirm</span></div>
+  <div><div class="sw pp"><b>Aa</b><span>after</span></div><h4>paper and ink</h4><p>Cards and chips that sit on the ground. Lavender marks the "after".</p></div>
+</div>
+<script>
+(function(){
+function pair(cv,lit){ var s=8,p=Tacit.pen(cv,s),W=p.W,H=p.H,y=Tacit.snap(H/2,s),rA=s*2.6,rB=s*2.2,gp=rA+rB+s*2,ax=Tacit.snap(W/2-gp/2,s),bx=Tacit.snap(W/2+gp/2,s),hot=[],gp2=gp*gp*0.75;
+  for(var gy=s/2;gy<H;gy+=s) for(var gx=s/2;gx<W;gx+=s){ var dA=(gx-ax)*(gx-ax)+(gy-y)*(gy-y), dB=(gx-bx)*(gx-bx)+(gy-y)*(gy-y);
+    if(dA<(rA+s*.9)*(rA+s*.9)||dB<(rB+s*.9)*(rB+s*.9)) continue;
+    if(lit&&dA<gp2&&dB<gp2){ hot.push(gx,gy,0.7); continue; }
+    if((Math.round((gx-s/2)/s)+Math.round((gy-s/2)/s))&1) continue; p.ctx.globalAlpha=.45; p.put(gx,gy,0.12); }
+  p.ctx.globalAlpha=1; Tacit.ring(p.put,ax,y,rA,s,lit?hot:null); Tacit.ring(p.put,bx,y,rB,s,lit?hot:null); Tacit.drawHot(p.ctx,p.put,hot,p.lit); }
+function draw(){ pair(document.getElementById('c1'),false); pair(document.getElementById('c2'),true); }
+draw(); window.addEventListener('resize',draw);
+})();
+</script>
+</body>
+</html>
