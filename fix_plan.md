@@ -29,7 +29,7 @@
 - [x] P1: `llm.py` (Responses API, json_schema, respx) + `scenarios.py`: segments, wearer guess by level, windows, Jev classification (fake), extraction, quote check, dedup, retention, `stop_request` → mute command + tests. Spec: §13.4
 - [x] P1: moments, draft skills from conversations, passes (16 ↔ 74), typed `/api/feed`, `/api/moments` + tests. Spec: §13.5
 - [x] P1: PWA: `#/moments`, the typed `#/feed` (PassChip), `#/me` "your band" (connect, state, mute/unmute, gestures help, per-kind toggles, share creative), ListeningPill + PWA tests. Spec: §12, §13.5
-- [ ] P1: offline buffer (cap, 24 h, rewind deletes, prerecorded transcription, upload with backoff, delete after upload) + tests. Spec: §13.7
+- [x] P1: offline buffer (cap, 24 h, rewind deletes, prerecorded transcription, upload with backoff, delete after upload) + tests. Spec: §13.7
 
 ## P2: Raspberry Pi hub
 

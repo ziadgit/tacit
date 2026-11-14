@@ -36,6 +36,7 @@ import httpx
 
 from . import gestures, motion
 from .config import Settings, require, require_band
+from .offline import AudioBuffer, Backoff, DeepgramPrerecorded, EventQueue, drain
 
 log = logging.getLogger("tacit.bridge")
 
@@ -206,7 +207,7 @@ class Bridge:
                  templates: gestures.Templates | None = None,
                  state_path: Path | None = None, clock: Callable[[], float] = time.time,
                  sleep: Callable[[float], Any] = asyncio.sleep,
-                 echo: Callable[[str], None] = print):
+                 echo: Callable[[str], None] = print, transcriber: Any = None):
         self.settings = settings
         self.band_no = require_band(settings)
         self.band = band
@@ -239,7 +240,18 @@ class Bridge:
         self._last_poll = float("-inf")
         self._last_state = float("-inf")
         self.last_sync: float | None = None
-        self.buffer_mb = 0.0
+        root = settings.tacit_data_dir / "bridge"
+        self.buffer = AudioBuffer(root, settings.bridge_buffer_mb, clock)   # offline (§13.7)
+        self.queue = EventQueue(root / "queue.jsonl")
+        self.backoff = Backoff(clock)
+        self.offline = False
+        if transcriber is None and settings.deepgram_api_key is not None:
+            transcriber = DeepgramPrerecorded(settings)
+        self.transcriber = transcriber
+
+    @property
+    def buffer_mb(self) -> float:
+        return self.buffer.size_mb
 
     # ---- set-up -----------------------------------------------------------------------------
 
@@ -293,10 +305,20 @@ class Bridge:
         if not self.noticed:
             self.echo(SOUND_NOTICE)
             self.noticed = True
-        self.ears = self.ears_factory(self.pieces.put, self.keyterms)
-        self.ears.start()
+        self.start_ears()
         await self.band.configure(audio=True, mic_level=MIC_LEVEL_S)
         self.listening = True
+
+    def start_ears(self) -> None:
+        """Start the live speech engine; with no internet, sound goes to the buffer instead."""
+        try:
+            self.ears = self.ears_factory(self.pieces.put, self.keyterms)
+            self.ears.start()
+            self.offline = False
+        except Exception as e:  # noqa: BLE001 - offline: buffer the sound, mute still works
+            log.info("speech offline (%s): buffering", type(e).__name__)
+            self.ears = None
+            self.offline = True
 
     # ---- mute / unmute ------------------------------------------------------------------------
 
@@ -340,6 +362,7 @@ class Bridge:
 
     def drop_recent(self, seconds: float) -> None:
         cut = self.clock() - seconds
+        self.buffer.rewind(cut)
         self.pending_segments = [s for s in self.pending_segments if s["_ended"] < cut]
         while True:   # pieces still waiting in the queue are recent by definition
             try:
@@ -392,8 +415,18 @@ class Bridge:
                                      "ended_at": iso(t), "confidence": 1.0})
 
     def on_audio(self, a: Any) -> None:
-        if self.listening and self.ears is not None:
-            self.ears.feed(a)
+        if not self.listening or self.muted:
+            return
+        if self.ears is not None and not self.offline:
+            try:
+                self.ears.feed(a)
+                return
+            except Exception as e:  # noqa: BLE001 - the stream dropped: buffer from here on
+                log.info("speech dropped (%s): buffering", type(e).__name__)
+                self.ears, self.offline = None, True
+        packet = getattr(a, "opus", a)
+        if isinstance(packet, bytes | bytearray):
+            self.buffer.add(bytes(packet), self.clock())
 
     def on_mic_level(self, e: Any) -> None:
         db = getattr(e, "rms_db", None)
@@ -455,7 +488,7 @@ class Bridge:
     def state(self) -> dict[str, Any]:
         return {"connected": self.connected, "listening": self.listening and not self.muted,
                 "muted": self.muted, "battery": self.battery, "buffer_mb": self.buffer_mb,
-                "last_sync": iso(self.last_sync) if self.last_sync else None}
+                "last_sync": iso(self.last_sync) if self.last_sync is not None else None}
 
     async def post_state(self) -> None:
         if self.server is None:
@@ -466,8 +499,11 @@ class Bridge:
             return
 
     async def flush(self) -> None:
-        """Upload what is waiting. On failure it stays and is tried again next time."""
+        """Upload what is waiting. On failure it stays (moments in queue.jsonl) and is tried
+        again with exponential backoff, at most every 5 minutes."""
         if self.server is None:
+            return
+        if not self.backoff.ready():
             return
         try:
             if self.pending_rewind:
@@ -478,14 +514,25 @@ class Bridge:
                 await self.server.segments([{k: v for k, v in s.items() if k != "_ended"}
                                             for s in batch])
                 self.pending_segments = self.pending_segments[len(batch):]
-            if self.pending_moments:
-                batch = [m for m in self.pending_moments if m["kind"] not in self.kinds_off]
-                if batch:
-                    await self.server.moments(batch)
-                self.pending_moments = []
+            moments = [m for m in self.queue.items() + self.pending_moments
+                       if m.get("kind") not in self.kinds_off]
+            if moments:
+                await self.server.moments(moments)
+            self.queue.clear()
+            self.pending_moments = []
+            if self.transcriber is not None and self.buffer.files():
+                n = await drain(self.buffer, self.transcriber, self.server.segments)
+                log.info("offline buffer: %d files transcribed and deleted", n)
+            self.backoff.ok()
             self.last_sync = self.clock()
         except Exception as e:  # noqa: BLE001
-            log.info("upload later: %s", type(e).__name__)
+            self.queue.add(self.pending_moments)
+            self.pending_moments = []
+            self.backoff.failed()
+            log.info("upload later (%s), in %.0fs", type(e).__name__, self.backoff.delay)
+            return
+        if self.offline and self.listening and not self.muted:
+            self.start_ears()   # back online: live speech again
 
     async def tick(self) -> None:
         await self.take_pieces()

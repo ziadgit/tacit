@@ -294,6 +294,9 @@ async def test_rewind_drops_unuploaded_segments(tmp_path):
     assert [s["text"] for s in r.bridge.pending_segments] == ["old enough"]
     server.fail = False
     await r.bridge.flush()
+    assert server.named("rewind") == []                   # backing off after the failure
+    await r.advance(2100, step=100)
+    await r.bridge.flush()
     assert server.named("rewind") == [15]
     assert [s["text"] for s in server.named("segments")[0]] == ["old enough"]
     await r.close()
