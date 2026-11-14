@@ -14,7 +14,7 @@
 
 ## P1: payments and the rest of the PWA
 
-- [ ] P1: `payments.py`: `StripePayments` (refuses non-test keys), `/api/follow/{id}/checkout`, `/stripe/webhook` (signature, `paid`, idempotent) + tests with a fake payments object; `doctor` Stripe row. Spec: §10, §14
+- [x] P1: `payments.py`: `StripePayments` (refuses non-test keys), `/api/follow/{id}/checkout`, `/stripe/webhook` (signature, `paid`, idempotent) + tests with a fake payments object; `doctor` Stripe row. Spec: §10, §14
 - [ ] P1: PWA screens `#/people`, `#/people/:id` (follow, unlock → checkout redirect), `#/feed`; offline banner; reduced motion + tests. Spec: §12
 - [ ] P1: `portraits.py`: MiniMax client (base64 only, error codes, respx), `to_dot_map` (Pillow) + tests, `/api/portrait` POST/PUT/DELETE with the photo-consent rule and rate limit, PWA "your picture" (words / my photo, pick one of 4), `pwa/vendor/face.js` copy, portrait on `#/people/:id` + `#/me`. Spec: §17
 - [ ] P1: Fly.io: `fly.toml`, `Dockerfile`, `.dockerignore`, `serve --proxy-headers`, lazy kit import + deploy tests (files only, never run `fly`). Spec: §16

@@ -156,9 +156,9 @@ def signout() -> Response:
 
 
 def _routers() -> list[APIRouter]:
-    from . import context, interview, network
+    from . import context, interview, network, payments
 
-    return [core, context.router, interview.router, network.router]
+    return [core, context.router, interview.router, network.router, payments.router]
 
 
 def build_clients(app: FastAPI, settings: Settings) -> None:
@@ -176,6 +176,10 @@ def build_clients(app: FastAPI, settings: Settings) -> None:
         from .interview import VapiApi
 
         st.vapi = VapiApi(settings)
+    if "payments" not in st.injected:
+        from .payments import make_payments
+
+        st.payments = make_payments(settings)
 
 
 def create_app(settings: Settings | None = None, *, store: Store | None = None, exa=None,

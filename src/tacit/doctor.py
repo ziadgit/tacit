@@ -82,6 +82,16 @@ async def check_jev(s: Settings, http: httpx.AsyncClient) -> tuple[bool, str]:
         return False, type(e).__name__
 
 
+async def check_stripe(s: Settings, http: httpx.AsyncClient) -> tuple[bool, str]:
+    from .payments import is_test_key
+
+    key = require(s.stripe_secret_key, "STRIPE_SECRET_KEY")
+    if not is_test_key(key):
+        return False, "live key (only test keys are allowed; not called)"
+    r = await http.get("https://api.stripe.com/v1/balance", auth=(key, ""))
+    return (True, "works (test mode)") if r.is_success else (False, f"status {r.status_code}")
+
+
 def check_band_sim(s: Settings) -> tuple[bool, str]:
     band_no = require_band(s)
     use_kit()
@@ -100,6 +110,7 @@ CHECKS: dict[str, tuple[str, Callable[..., Awaitable[tuple[bool, str]]]]] = {
     "Exa": ("exa_api_key", check_exa),
     "Jev (TypeSafe)": ("typesafe_api_key", check_jev),
     "Vapi": ("vapi_api_key", check_vapi),
+    "Stripe": ("stripe_secret_key", check_stripe),
 }
 
 
