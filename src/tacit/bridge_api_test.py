@@ -155,3 +155,19 @@ def test_delete_everything_removes_device(tmp_path):
     pwa.delete("/api/me")
     assert store.device_by_token(token_hash(token)) is None
     assert bridge.get("/api/bridge/commands").status_code == 401
+
+
+def test_bridge_config_keyterms(tmp_path):
+    from tacit.domain import ContextItem
+
+    store, app, pwa, bridge, uid, token = paired(tmp_path)
+    store.add_context_items([
+        ContextItem(user_id=uid, kind="work", text="Founder of Acme Robotics in Oakland",
+                    source_url="https://a.example", status="kept"),
+        ContextItem(user_id=uid, kind="work", text="Secret Pending Thing",
+                    source_url="https://a.example")])
+    cfg = bridge.get("/api/bridge/config").json()
+    assert cfg["band"] == 74
+    assert cfg["keyterms"][0] == "Maya"
+    assert "Acme Robotics" in cfg["keyterms"] and "Oakland" in cfg["keyterms"]
+    assert not any("Secret" in k for k in cfg["keyterms"])

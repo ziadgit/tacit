@@ -86,3 +86,20 @@ def vapi_sync_cmd(
     except VapiError as e:
         typer.echo(f"FAIL  {e}")
         raise typer.Exit(1) from None
+
+
+@app.command("bridge")
+def bridge_cmd(
+    sim: bool = typer.Option(False, "--sim", help="Use the pretend band (no Bluetooth)."),
+) -> None:
+    """Run the band bridge for TACIT_BAND: streams, mute, uploads."""
+    from .bridge import run_bridge
+
+    settings = _settings()
+    if settings.tacit_band is None:
+        typer.echo("FAIL  TACIT_BAND is not set: put 16 or 74 in .env")
+        raise typer.Exit(1)
+    try:
+        asyncio.run(run_bridge(settings, sim=sim, echo=typer.echo))
+    except KeyboardInterrupt:
+        typer.echo("tacit bridge: stopped")

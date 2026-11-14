@@ -13,6 +13,7 @@ bridge's real state, unless a PWA command is still waiting to be picked up.
 
 import hashlib
 import logging
+import re
 import secrets
 import time
 from collections import defaultdict, deque
@@ -24,7 +25,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from .auth import current_user, get_settings, get_store
 from .config import TEAM_BANDS, Settings
-from .domain import CREATIVE_KINDS, BridgeDevice, Moment, Segment, User, now
+from .domain import CREATIVE_KINDS, BridgeDevice, Moment, Segment, User, first_name, now
 from .store import Store
 
 log = logging.getLogger("tacit.bridge")
@@ -225,6 +226,30 @@ class MomentsIn(BaseModel):
 
 class RewindIn(BaseModel):
     seconds: int = Field(ge=0)
+
+
+KEYTERM = re.compile(r"\b[A-Z][\w+#.-]*(?:\s+[A-Z][\w+#.-]*)*")
+
+
+def keyterms_for(store: Store, user: User | None) -> list[str]:
+    """Up to 20 words Deepgram should listen for: names from the wearer's kept context."""
+    if user is None:
+        return []
+    terms: list[str] = [first_name(user.name)]
+    for item in store.kept_context(user.id):
+        terms += [m.group(0).strip(" .-") for m in KEYTERM.finditer(item.text)]
+    out: list[str] = []
+    for t in terms:
+        if t and len(t) <= 40 and t.lower() not in {o.lower() for o in out}:
+            out.append(t)
+    return out[:20]
+
+
+@router.get("/api/bridge/config")
+def bridge_config(dev: Device, store: StoreDep) -> dict[str, Any]:
+    user = store.get_user(dev.user_id)
+    return {"band": dev.band, "keyterms": keyterms_for(store, user),
+            "kinds_off": user.kinds_off if user else []}
 
 
 @router.post("/api/bridge/state")
