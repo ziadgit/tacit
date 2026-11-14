@@ -1,0 +1,45 @@
+<!-- @dsCard group="Drawing" height=300 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>plus, dash, dot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist+Pixel:ELSH@0..100&display=swap" rel="stylesheet">
+<style>
+html,body{ margin:0; }
+.wrap{ height:300px; display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); --glow-size:30% 60%; --glow-at:78% 50%; }
+.marks{ position:relative; z-index:2; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; align-content:center; padding:0 10px 0 24px; }
+.mk{ text-align:center; }
+.mk canvas{ width:72px; height:72px; color:var(--t-glyph); }
+.mk b{ display:block; margin-top:6px; font:400 23px/1 var(--t-serif); color:var(--t-glyph); }
+.mk span{ display:block; margin-top:4px; font:400 13px/1.3 var(--t-sans); color:var(--t-cap); }
+.patch{ position:relative; }
+.patch .tc-fx{ height:calc(100% - 62px); }
+.patch p{ position:absolute; z-index:2; left:0; right:16px; bottom:14px; margin:0; text-align:center; font:italic 400 16px/1.2 var(--t-serif); color:var(--t-cap); text-shadow:0 1px 8px var(--t-shade); }
+</style>
+<link rel="stylesheet" href="../bundle.css">
+<script src="../bundle.js"></script>
+</head>
+<body>
+<div class="tc-ground wrap">
+  <div class="marks">
+    <div class="mk"><canvas id="m1"></canvas><b>dot</b><span>quiet ground</span></div>
+    <div class="mk"><canvas id="m2"></canvas><b>dash</b><span>ground where people are close</span></div>
+    <div class="mk"><canvas id="m3"></canvas><b>plus</b><span>a person, an edge</span></div>
+    <div class="mk"><canvas id="m4"></canvas><b>bold plus</b><span>a centre</span></div>
+  </div>
+  <div class="patch"><canvas class="tc-fx" id="patch"></canvas><p>one grid: every mark sits in the middle of a cell, nothing is drawn between cells</p></div>
+</div>
+<script>
+(function(){
+var list=[['m1',0.12],['m2',0.4],['m3',0.7],['m4',1]];
+function marks(){ list.forEach(function(a){ var cv=document.getElementById(a[0]), p=Tacit.pen(cv,56); p.put(Math.round(p.W/2),Math.round(p.H/2),a[1]); }); }
+marks();
+var f=Tacit.field(document.getElementById('patch'),null,{K:5,cell:6,still:true});
+window.addEventListener('resize',function(){ marks(); f.resize(); });
+})();
+</script>
+</body>
+</html>

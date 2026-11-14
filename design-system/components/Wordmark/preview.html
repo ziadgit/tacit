@@ -1,0 +1,41 @@
+<!-- @dsCard group="Brand" height=452 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>wordmark</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist+Pixel:ELSH@0..100&display=swap" rel="stylesheet">
+<style>
+html,body{ margin:0; }
+.hero{ height:250px; display:grid; place-items:center; text-align:center; --glow-size:34% 70%; --glow-at:50% 52%; }
+.hero .tc-word{ font-size:110px; }
+.hero .tc-line{ font-size:25px; margin-top:4px; }
+.row{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); }
+.cell{ height:202px; padding:18px 18px 16px; display:flex; flex-direction:column; justify-content:flex-end; gap:10px; }
+.cell p{ margin:0; font:italic 400 16px/1.2 var(--t-serif); }
+.paper{ background:var(--t-paper); color:var(--t-ink); box-shadow:inset -1px 0 0 rgba(40,36,60,.14); }
+.sw{ --glow-size:0% 0%; }
+.old{ font:400 46px/1 var(--t-serif); background:var(--t-word); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.sdi{ position:relative; }
+.sdi > i{ position:absolute; left:50%; top:.245em; width:.17em; height:.17em; margin-left:-.085em; color:var(--t-cap);
+  background:linear-gradient(currentColor,currentColor) center/100% .045em no-repeat, linear-gradient(currentColor,currentColor) center/.045em 100% no-repeat; }
+.marks{ display:flex; align-items:center; gap:14px; }
+.marks svg{ width:38px; height:38px; fill:var(--t-glyph); }
+.marks circle{ fill:var(--t-listen); }
+</style>
+<link rel="stylesheet" href="../bundle.css">
+<script src="../bundle.js"></script>
+</head>
+<body>
+<div class="tc-ground hero"><div class="tc-above"><span class="tc-word">tac<span class="bi">i</span>t</span><p class="tc-line">agents have skills. people have taste. tacit is how it gets around.</p></div></div>
+<div class="row">
+  <div class="cell paper"><span class="tc-word ink" style="font-size:48px">tac<span class="bi">i</span>t</span><p>on paper, in one colour</p></div>
+  <div class="cell paper"><span class="tc-word ink" style="font-size:29px">tac<span class="bi">i</span>t</span><p>the smallest size that still reads, 29px</p></div>
+  <div class="cell tc-ground sw"><div class="tc-above"><span class="tc-word" style="font-size:48px">tac<span class="bi">i</span>t</span><p style="margin-top:10px">in the corner of a screen, 48px</p></div></div>
+  <div class="cell tc-ground sw"><div class="tc-above"><span class="tc-word" style="font-size:64px">tac<span class="bi">i</span>t</span>
+    <p style="margin-top:10px"><span class="tc-confirm">to confirm</span> the dot of the i: its size and the exact blue</p></div></div>
+</div>
+</body>
+</html>

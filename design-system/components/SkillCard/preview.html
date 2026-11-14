@@ -1,0 +1,43 @@
+<!-- @dsCard group="Pieces" height=760 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>skill card</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist+Pixel:ELSH@0..100&display=swap" rel="stylesheet">
+<style>
+html,body{ margin:0; }
+body{ background:var(--t-paper); padding:24px 0 28px; }
+</style>
+<link rel="stylesheet" href="../bundle.css">
+<script src="../bundle.js"></script>
+</head>
+<body>
+<div class="tc-phone"><div class="tc-ground tc-scr">
+  <div class="tc-notif"><i></i><div><b>Tacit</b> &middot; now<br>New skill from Maya &middot; tap to hear it</div></div>
+  <div class="tc-card tc-piece" id="piece">
+    <div class="top"><span class="tag">Skill &middot; 1 min</span><span class="sig"><small>from</small>Maya</span></div>
+    <h4>Open an update with the number</h4>
+    <p class="when">Use it when you report results: in a meeting, a message, a demo.</p>
+    <div class="tc-ground tc-player"><canvas></canvas><span class="play"></span><span class="cap">Maya explains it</span></div>
+    <div class="tc-wave"></div>
+    <div class="tc-time"><span>0:00</span><span>1:00</span></div>
+    <p class="lbl2">See it work</p>
+    <div class="tc-ba">
+      <p class="b4"><small>Before</small>&ldquo;So, last quarter we started&hellip;&rdquo;</p>
+      <p class="af"><small>After</small>&ldquo;Churn fell <em>18%</em>. Here's why.&rdquo;</p>
+    </div>
+    <div class="tc-acts"><button type="button" class="tc-btn">Try it on my next update</button><button type="button" class="tc-textlink">Keep for later</button></div>
+  </div>
+  <span class="tc-homebar"></span>
+</div></div>
+<script>
+(function(){
+var root=document.getElementById('piece');
+Tacit.run(Tacit.minute(root),450,root);
+})();
+</script>
+</body>
+</html>

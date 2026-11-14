@@ -1,0 +1,46 @@
+<!-- @dsCard group="Drawing" height=250 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>how things move</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist+Pixel:ELSH@0..100&display=swap" rel="stylesheet">
+<style>
+html,body{ margin:0; }
+.wrap{ height:250px; --glow-size:30% 70%; --glow-at:50% 40%; }
+.wrap > canvas{ position:absolute; left:0; top:0; width:100%; height:150px; color:var(--t-glyph); }
+.row{ position:absolute; z-index:2; left:22px; right:22px; bottom:18px; display:flex; flex-wrap:wrap; align-items:center; gap:10px 26px; }
+.row p{ margin:0; font:italic 400 17px/1.2 var(--t-serif); color:var(--t-cap); text-shadow:0 1px 8px var(--t-shade); }
+.again{ animation:tc-chipin .35s ease-out both; }
+</style>
+<link rel="stylesheet" href="../bundle.css">
+<script src="../bundle.js"></script>
+</head>
+<body>
+<div class="tc-ground wrap" id="st">
+  <canvas id="walk"></canvas>
+  <div class="row">
+    <div class="tc-pill"><span class="tc-bud"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>Listening</div>
+    <div class="tc-chip" id="chip"><b>Maya</b><i>&rarr;</i><b>You</b><em>Open with the number</em></div>
+    <p>one grid step every 110 ms, about nine frames a second</p>
+  </div>
+</div>
+<script>
+(function(){
+var st=document.getElementById('st'), cv=document.getElementById('walk'), chip=document.getElementById('chip'), n=0, s=8;
+function tick(){ n++;
+  var p=Tacit.pen(cv,s), W=p.W, H=p.H, y=Tacit.snap(H*0.5,s), t=(n%110)/110, u=t<0.5?t*2:2-t*2; u=u*u*(3-2*u);
+  var x=Tacit.snap(W*0.14+u*W*0.72,s), rho=20, hx=Tacit.snap(W*0.86,s), near=Math.abs(x-hx)<70, hot=[];
+  for(var gy=s/2;gy<H;gy+=s) for(var gx=s/2;gx<W;gx+=s){ var d1=(gx-x)*(gx-x)+(gy-y)*(gy-y), d2=(gx-hx-52)*(gx-hx-52)+(gy-y)*(gy-y);
+    if(d1<(rho+s)*(rho+s)||d2<(rho+s)*(rho+s)) continue;
+    if((Math.round((gx-s/2)/s)+Math.round((gy-s/2)/s))&1) continue; p.ctx.globalAlpha=.3; p.put(gx,gy,0.12); }
+  p.ctx.globalAlpha=1;
+  Tacit.ring(p.put,x,y,rho,s,near?hot:null); Tacit.ring(p.put,Tacit.snap(hx+52,s),y,rho,s,near?hot:null); Tacit.drawHot(p.ctx,p.put,hot,p.lit);
+  if(n%55===0){ chip.classList.remove('again'); void chip.offsetWidth; chip.classList.add('again'); } }
+Tacit.run({tick:tick,resize:tick,warm:30},Tacit.TICK,st);
+})();
+</script>
+</body>
+</html>

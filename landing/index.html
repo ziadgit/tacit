@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tacit · Agents have skills. People have taste.</title>
+<meta name="description" content="Tacit is a community network: what people know but never write down passes from person to person, as skills your AI agent can use.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Caveat:wght@500;600;700&family=Geist+Pixel:ELSH@0..100&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="landing.css">
+</head>
+<body>
+
+<!--
+  TACIT LANDING PAGE
+  Things a person may want to change by hand are marked with "EDIT:".
+  The lines under the title are set at the top of landing.js (TAGLINES).
+  Maya and the other names are invented example people.
+-->
+
+<main>
+
+<!-- ================================================= 1 · home: the title, and the network right under it -->
+<section class="hero tc-stage" id="top">
+  <canvas class="tc-fx" aria-hidden="true"></canvas>
+  <div class="tc-labs" aria-hidden="true"></div>
+  <div class="tc-names" aria-hidden="true"></div>
+
+  <div class="wrap">
+    <div class="tell">
+      <div class="brand big" aria-label="Tacit">tac<span class="bi">i</span>t</div>
+      <!-- EDIT: the lines under the title are chosen in landing.js (TAGLINES). The text here is what shows if scripts are off. -->
+      <h1>
+        <span>Agents have skills.</span>
+        <span>People have taste.</span>
+        <span>Tacit is how it gets around.</span>
+      </h1>
+      <!-- on a phone the network sits here, right under the headline -->
+      <div class="gap" aria-hidden="true"></div>
+      <!-- EDIT: one short line: what Tacit is (the team's own wording) -->
+      <p class="lead">A community network where you can grow your personal brand and learn from other experts.</p>
+      <button class="btn on-ground" type="button" data-open-join>start with a call</button>
+    </div>
+  </div>
+
+  <div class="tc-chip" aria-hidden="true"></div>
+</section>
+
+<!-- ================================================= 2 · what the network gives you, and one person's page -->
+<section class="person" id="page">
+  <div class="wrap person-grid">
+    <!-- EDIT: the example person. Name, one line about her, three skills. -->
+    <article class="card page" aria-label="An example page: Maya">
+      <!-- the portrait is drawn in landing.js (FACES) from a small map of marks -->
+      <canvas class="face" data-face="maya" aria-hidden="true"></canvas>
+      <p class="nm">Maya</p>
+      <p class="bio">Founder of a six-person startup. Ten years in product.</p>
+      <ul class="skills">
+        <li class="skill">
+          <p class="st">Open an update with the number</p>
+          <p class="said">&ldquo;They forget the story. They remember 40%.&rdquo;</p>
+        </li>
+        <li class="skill">
+          <p class="st">Give the bad news in the first minute</p>
+          <p class="said">&ldquo;Bad news goes first, or they doubt the rest.&rdquo;</p>
+        </li>
+        <li class="skill">
+          <p class="st">Cut the feature before the deadline does</p>
+          <p class="said">&ldquo;Cut on Monday, or apologise on Friday.&rdquo;</p>
+        </li>
+      </ul>
+      <button class="follow" type="button" aria-pressed="false" data-follow data-on="following · her new skills reach your agent" data-off="follow maya's skills">follow maya's skills</button>
+    </article>
+
+    <div class="copy">
+      <h2>What the network gives you</h2>
+      <!-- EDIT: one line for each side -->
+      <div class="door">
+        <p class="kick">when you learn</p>
+        <p class="lead">Walk away from good conversations with skills your agent uses.</p>
+      </div>
+      <div class="door">
+        <p class="kick">when you explain</p>
+        <p class="lead">Say how you do it; your name stays on it.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================= 3 · the journey -->
+<!-- EDIT: the four steps, in the team's own words -->
+<section class="how" id="journey">
+  <div class="wrap">
+    <h2>The journey</h2>
+    <ol class="journey">
+      <li><b>1</b><h3>Connect your context</h3><p>to give Tacit access to the best knowledge about you</p></li>
+      <li><b>2</b><h3>Have a short conversation with Tacit</h3></li>
+      <li><b>3</b><h3>Grow your network</h3></li>
+      <li><b>4</b><h3>Learn from people</h3></li>
+    </ol>
+  </div>
+</section>
+
+<!-- ================================================= 4 · one honest line -->
+<section class="honest" id="honest">
+  <div class="wrap">
+    <p>A skill carries their verdict and their reason. Not their taste.</p>
+  </div>
+</section>
+
+<!-- ================================================= 5 · start with a call -->
+<section class="end" id="start">
+  <div class="wrap">
+    <p class="line" data-tagline>Agents have skills. People have taste. Tacit is how it gets around.</p>
+    <button class="btn on-ground" type="button" data-open-join>start with a call</button>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <span>Tacit is a prototype, built in one day at VexoHacks, San Francisco, Nov 14, 2026. The people on this page are examples.</span>
+</footer>
+
+<!-- ================================================= the pop-up: onboarding starts with a phone call -->
+<!-- EDIT: the words of the pop-up. The form sends and keeps nothing: it only answers on the page. -->
+<dialog class="pop" id="join" aria-labelledby="join-title">
+  <div class="sheet">
+    <button class="x" type="button" data-close aria-label="Close">&times;</button>
+    <h2 id="join-title">Start with a call</h2>
+    <p class="say">Leave your name and number, connect your context, and Tacit calls you.</p>
+    <form class="join" data-join novalidate>
+      <label class="field"><input type="text" name="name" placeholder="your name" aria-label="Your name" autocomplete="off" maxlength="40"></label>
+      <label class="field"><input type="tel" name="phone" placeholder="your number" aria-label="Your phone number" autocomplete="off" inputmode="tel" maxlength="24"></label>
+      <button class="btn" type="submit">call me</button>
+    </form>
+    <p class="fine" data-join-note hidden></p>
+  </div>
+</dialog>
+
+<script src="landing.js"></script>
+</body>
+</html>
