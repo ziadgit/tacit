@@ -103,3 +103,26 @@ def bridge_cmd(
         asyncio.run(run_bridge(settings, sim=sim, echo=typer.echo))
     except KeyboardInterrupt:
         typer.echo("tacit bridge: stopped")
+
+
+gestures_app = typer.Typer(no_args_is_help=True, help="The wearer's own mute gestures.")
+app.add_typer(gestures_app, name="gestures")
+
+
+@gestures_app.command("record")
+def gestures_record_cmd(
+    name: str = typer.Argument(..., help="x or figure8"),
+    sim: bool = typer.Option(False, "--sim", help="Use the pretend band (it draws it itself)."),
+) -> None:
+    """Record 3 examples of your own X or figure 8 (saved to data/gestures.json)."""
+    from .gesture_record import record
+    from .gestures import GESTURES
+
+    if name not in GESTURES:
+        typer.echo(f"FAIL  the gestures are: {', '.join(GESTURES)}")
+        raise typer.Exit(1)
+    settings = _settings()
+    if settings.tacit_band is None:
+        typer.echo("FAIL  TACIT_BAND is not set: put 16 or 74 in .env")
+        raise typer.Exit(1)
+    asyncio.run(record(settings, name, sim=sim, echo=typer.echo))

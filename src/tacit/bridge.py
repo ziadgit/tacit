@@ -213,7 +213,8 @@ class Bridge:
         self.band = band
         self.server = server
         self.ears_factory = ears_factory or (lambda on, kt: deepgram_ears(on, kt, settings))
-        self.templates = templates if templates is not None else gestures.load_templates()
+        self.templates = templates if templates is not None else gestures.load_templates(
+            settings.tacit_data_dir / "gestures.json")   # built-ins + `tacit gestures record`
         self.detector = gestures.GestureDetector(self.templates, gestures.MUTE_LIMIT)
         self.state_path = state_path or settings.tacit_data_dir / "bridge-state.json"
         self.clock = clock

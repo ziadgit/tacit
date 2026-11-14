@@ -34,6 +34,6 @@
 ## P2: Raspberry Pi hub
 
 - [x] P2: `/healthz` bridge fields, `deploy/pi/tacit-bridge.service` + `deploy/pi/README.md` (files only, never run). Spec: §13.8
-- [ ] P2: `tacit gestures record x|figure8 [--sim]` (3 examples → data/gestures.json, used with the built-ins) + tests. Spec: §13.2, §14
+- [x] P2: `tacit gestures record x|figure8 [--sim]` (3 examples → data/gestures.json, used with the built-ins) + tests. Spec: §13.2, §14
 
 ## Discovered
