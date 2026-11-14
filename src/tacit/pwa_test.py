@@ -112,3 +112,29 @@ def test_screens_and_words():
     # blue means only "listening": the PWA's own CSS never uses it
     css = (PWA / "style.css").read_text().upper()
     assert "#1F5EFF" not in css and "--T-LISTEN" not in css
+
+
+def test_p1_screens_people_feed():
+    html = (PWA / "index.html").read_text()
+    for screen in ("people", "person", "feed"):
+        assert f'data-screen="{screen}"' in html
+    for nav in ("#/feed", "#/people", "#/skills", "#/me"):
+        assert f'href="{nav}"' in html
+    app = own_js()["app.js"]
+    assert "unlock followers-only skills for" in app
+    assert "/checkout`" in app and "location.assign(url)" in app
+    assert "only you see this" in app
+    assert "'sketched'" in app
+    assert "T.ring(" in app  # PersonRings come from the design system's ring()
+    css = (PWA / "style.css").read_text()
+    assert "--t-lit" in css  # orange only on a new pass
+    assert css.count("--t-lit") == 2 and ".pass.lit" in css
+
+
+def test_reduced_motion_and_offline_banner():
+    css = (PWA / "style.css").read_text()
+    assert "@media (prefers-reduced-motion: reduce)" in css
+    html = (PWA / "index.html").read_text()
+    assert 'id="offline"' in html and "you're offline" in html
+    app = own_js()["app.js"]
+    assert "addEventListener('offline'" in app and "navigator.onLine" in app

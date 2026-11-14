@@ -348,6 +348,161 @@ function editForm(s, done) {
   return form;
 }
 
+// ---- people, a person, the feed ---------------------------------------------------------
+
+// A PersonRing: a ring of pluses (bigger with more skills) and the first name in handwriting.
+function personRing(person, { size = 'sm' } = {}) {
+  const px = size === 'lg' ? 120 : 76;
+  const cv = h('canvas', { class: 'ring-cv', width: px, height: px, 'aria-hidden': 'true',
+    style: `width:${px}px;height:${px}px` });
+  const fig = h('figure', { class: `ring ${size}` }, h('div', { class: 'tc-ground ring-ground' }, cv),
+    h('figcaption', { class: 'tc-hand ring-name', text: (person.first_name || '').toLowerCase() }));
+  requestAnimationFrame(() => drawRing(cv, person.skill_count || 0, size === 'lg' ? 8 : 6));
+  return fig;
+}
+
+export function ringRadius(skills, cell) {
+  return cell * (1.9 + 1.2 * Math.min(1, skills / 8));
+}
+
+function drawRing(cv, skills, cell) {
+  const T = window.Tacit;
+  if (!T || !cv.isConnected) return;
+  const p = T.pen(cv, cell);
+  T.ring(p.put, T.snap(p.W / 2, cell), T.snap(p.H / 2, cell), ringRadius(skills, cell), cell);
+}
+
+screens.people = async function people(root) {
+  root.replaceChildren(title('people'), h('p', { class: 'muted', text: 'loading…' }));
+  const list = await get('/api/people');
+  const others = list.filter((p) => !state.me || p.id !== state.me.id);
+  root.replaceChildren(
+    title('people'),
+    h('p', { class: 'lede', text: 'People who published what they know. Follow someone to see their skills in your feed.' }),
+    others.length
+      ? h('ul', { class: 'people' }, ...others.map((p) => h('li', {},
+        h('a', { class: 'person-link', href: `#/people/${encodeURIComponent(p.id)}` },
+          personRing(p),
+          h('span', { class: 'person-meta' },
+            p.headline ? h('span', { class: 'headline', text: p.headline }) : null,
+            h('span', { class: 'small', text: `${p.skill_count} skill${p.skill_count === 1 ? '' : 's'} · ${p.follower_count} follower${p.follower_count === 1 ? '' : 's'}${p.following ? ' · following' : ''}` }))))))
+      : h('p', { class: 'muted', text: 'Nobody has published a skill yet.' }),
+  );
+};
+
+// Sections the person header can add (the dot portrait).
+export const personHeader = [];
+
+export function price(cents) {
+  const d = (Number(cents) || 0) / 100;
+  return `$${Number.isInteger(d) ? d : d.toFixed(2)}`;
+}
+
+screens.person = async function person(root, id, params) {
+  root.replaceChildren(h('p', { class: 'muted', text: 'loading…' }));
+  if (params && params.get('paid') === '1') toast('Thank you. Their followers-only skills unlock as soon as Stripe confirms.');
+  const p = await get(`/api/people/${encodeURIComponent(id)}`);
+  const isMe = state.me && p.id === state.me.id;
+  const locked = p.skills.filter((s) => s.locked).length;
+  const acts = h('div', { class: 'row' });
+  if (!isMe) {
+    acts.append(p.following
+      ? h('button', { type: 'button', class: 'tc-btn on-ground quiet', text: 'unfollow', onclick: (ev) => act(ev.currentTarget, async () => {
+        await del(`/api/follow/${encodeURIComponent(p.id)}`);
+        render();
+      }) })
+      : h('button', { type: 'button', class: 'tc-btn on-ground', text: 'follow', onclick: (ev) => act(ev.currentTarget, async () => {
+        await post(`/api/follow/${encodeURIComponent(p.id)}`);
+        render();
+      }) }));
+    if (locked && state.config.payments_enabled && !p.paid) {
+      acts.append(h('button', { type: 'button', class: 'tc-btn on-ground quiet', text: `unlock followers-only skills for ${price(state.config.follow_price_cents)}`,
+        onclick: (ev) => act(ev.currentTarget, async () => {
+          const { url } = await post(`/api/follow/${encodeURIComponent(p.id)}/checkout`);
+          if (typeof url === 'string' && url.startsWith('https://')) location.assign(url);
+        }) }));
+    }
+  }
+  root.replaceChildren(
+    h('header', { class: 'person-head' },
+      ...personHeader.map((part) => part(p)),
+      personRing(p, { size: 'lg' }),
+      p.headline ? h('p', { class: 'lede', text: p.headline }) : null,
+      h('p', { class: 'counts', text: `${p.skill_count} skill${p.skill_count === 1 ? '' : 's'} · ${p.follower_count} follower${p.follower_count === 1 ? '' : 's'}` }),
+      acts),
+    phrase(`what ${(p.first_name || 'they').toLowerCase()} knows`),
+    h('div', { class: 'stack' }, ...(p.skills.length
+      ? p.skills.map((s) => h('article', { class: `tc-card skill${s.locked ? ' locked' : ''}` }, ...skillBody(s, p.first_name)))
+      : [h('p', { class: 'muted', text: 'No published skills yet.' })])),
+  );
+};
+
+const MADE = { writing: 'wrote', drawing: 'sketched', whiteboard: 'drew on a whiteboard', making: 'made something' };
+
+export function creativeLine(item) {
+  const who = (item.person && item.person.first_name || 'someone').toLowerCase();
+  const m = item.minutes || 0;
+  return `${who} ${MADE[item.kind] || 'made something'} for ${m} minute${m === 1 ? '' : 's'}`;
+}
+
+function passChip(item) {
+  const chip = h('p', { class: `tc-chip pass${item.lit ? ' lit' : ''}` },
+    h('b', { text: (item.giver && item.giver.first_name || '').toLowerCase() }),
+    h('em', { text: 'passed' }),
+    h('i', { text: item.skill ? item.skill.title.toLowerCase() : 'a skill' }),
+    h('em', { text: 'to' }),
+    h('b', { text: (item.receiver && item.receiver.first_name || '').toLowerCase() }));
+  return h('div', { class: 'feed-item' }, chip);
+}
+
+const POST_WORDS = { recommendation: 'recommends', lesson: 'learned', idea: 'had an idea' };
+
+function postBody(item) {
+  const b = item.body || {};
+  const parts = [b.thing, b.why, b.verdict, b.reason, b.idea].filter((x) => typeof x === 'string' && x);
+  return parts.join(' · ');
+}
+
+export function feedItem(item) {
+  if (item.type === 'pass') return passChip(item);
+  if (item.type === 'creative') {
+    return h('p', { class: 'feed-item creative tc-phrase', text: creativeLine(item) });
+  }
+  if (item.type === 'skill') {
+    return h('article', { class: 'tc-card skill' }, ...skillBody(item.skill, item.person && item.person.first_name));
+  }
+  if (item.type === 'post') {
+    const who = (item.person && item.person.first_name || '').toLowerCase();
+    return h('article', { class: 'tc-card post' },
+      h('p', { class: 'tag-phrase', text: `${who} ${POST_WORDS[item.kind] || 'shared'}` }),
+      h('h3', { class: 'card-title', text: item.title || '' }),
+      h('p', { text: postBody(item) }));
+  }
+  if (item.type === 'picked_up') {
+    const b = item.body || {};
+    return h('article', { class: 'tc-card picked' },
+      h('div', { class: 'top' }, h('span', { class: 'tag-phrase', text: 'you picked up' }),
+        h('span', { class: 'sig' }, h('small', { text: 'from' }), (item.giver && item.giver.first_name) || 'someone you talked with')),
+      h('h3', { class: 'card-title', text: item.title || b.title || '' }),
+      b.verdict ? h('p', { class: 'verdict', text: b.verdict }) : null,
+      b.reason ? h('p', { class: 'reason' }, h('em', { text: 'why: ' }), b.reason) : null,
+      b.quote ? h('p', { class: 'tc-said quote', text: `“${b.quote}”` }) : null,
+      h('p', { class: 'only-you', text: 'only you see this' }));
+  }
+  return null;
+}
+
+screens.feed = async function feed(root) {
+  root.replaceChildren(title('your feed'), h('p', { class: 'muted', text: 'loading…' }));
+  const items = await get('/api/feed');
+  root.replaceChildren(
+    title('your feed'),
+    h('div', { class: 'stack' }, ...(items.length ? items.map(feedItem).filter(Boolean)
+      : [h('p', { class: 'lede', text: 'Nothing here yet. Follow people to see the skills they publish.' }),
+        h('a', { class: 'tc-btn on-ground wide', href: '#/people', text: 'find people' })])),
+  );
+};
+
 // Sections other modules of the "me" screen can add (the band, the picture).
 export const meSections = [];
 
@@ -393,10 +548,12 @@ screens.me = function me(root) {
 // ---- router ----------------------------------------------------------------------------
 
 export function parseRoute(hash) {
-  const parts = String(hash || '').replace(/^#\/?/, '').split('/').filter(Boolean);
+  const [path, query = ''] = String(hash || '').replace(/^#\/?/, '').split('?');
+  const parts = path.split('/').filter(Boolean);
   const [name = '', id = null] = parts;
-  if (name === 'people' && id) return { name: 'person', id: decodeURIComponent(id) };
-  return { name, id: null };
+  const params = new URLSearchParams(query);
+  if (name === 'people' && id) return { name: 'person', id: decodeURIComponent(id), params };
+  return { name, id: null, params };
 }
 
 function go(hash) {
@@ -422,7 +579,7 @@ async function render() {
     else a.removeAttribute('aria-current');
   }
   try {
-    await screens[route.name](root, route.id);
+    await screens[route.name](root, route.id, route.params);
   } catch (e) {
     if (e instanceof ApiError && e.status === 401) { state.me = null; go('#/start'); return; }
     root.replaceChildren(title('hmm'), h('p', { class: 'lede', text: errorText(e) }));

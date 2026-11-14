@@ -87,3 +87,30 @@ a.tc-btn { text-decoration: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* people: rings of pluses with handwritten names (never tiles or photos) */
+.people { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.person-link { display: flex; gap: 14px; align-items: center; min-height: 64px; padding: 8px 4px; color: var(--t-cap);
+  text-decoration: none; border-radius: 14px; }
+.person-link:focus-visible { outline: 3px solid var(--t-glyph); }
+.person-meta { display: grid; gap: 2px; min-width: 0; text-shadow: 0 1px 8px var(--t-shade); }
+.headline { font-size: 17px; color: var(--t-glyph); overflow-wrap: anywhere; }
+.small { font-size: 16px; opacity: .92; }
+.ring { margin: 0; display: grid; justify-items: center; gap: 2px; flex: none; }
+.ring-ground { background: none !important; overflow: visible; }
+.ring-ground::after { display: none; }
+.ring-cv { display: block; color: var(--t-glyph); }
+.ring-name { color: var(--t-cap); text-shadow: 0 1px 8px var(--t-shade); font-size: 28px; }
+.ring.lg .ring-name { font-size: 40px; }
+.person-head { display: grid; justify-items: center; gap: 8px; text-align: center; padding-top: 8px; }
+.person-head .row { justify-content: center; }
+.skill.locked .card-title { opacity: .8; }
+
+/* the feed */
+.feed-item { margin: 0; }
+.tc-chip.pass { flex-wrap: wrap; max-width: 100%; margin: 0; }
+.tc-chip.pass i { font: italic 400 20px/1.1 var(--t-serif); }
+.tc-chip.pass.lit { box-shadow: 0 0 0 3px var(--t-lit), 0 6px 18px rgba(20,16,40,.25); }
+.tc-chip.pass.lit b { color: var(--t-lit); }
+.creative { color: var(--t-cap); }
+.only-you { margin-top: 10px !important; font: italic 400 16px/1.2 var(--t-serif); color: var(--t-acc); }
