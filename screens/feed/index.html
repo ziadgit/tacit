@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>tacit · feed</title>
+<meta name="description" content="The feed screen of the Tacit app: a static picture of the layout, with invented example people.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="../../design-system/components/bundle.css">
+<link rel="stylesheet" href="feed.css">
+</head>
+<body class="feed">
+
+<!--
+  TACIT APP · FEED SCREEN (static)
+  A picture of the screen in plain HTML and CSS: no data, no voice, no navigation yet.
+  Drawn first in Subframe (project "Tacit", canvas "Tacit app", page "Feed - lines").
+  Maya ("You"), Leo, Kai, Noor and Sam are invented example people, and every line of
+  advice, time and skill here is example text.
+  Things a person may want to change by hand are marked with "EDIT:".
+-->
+
+<header class="top">
+  <span class="tc-word wordmark">tac<span class="bi">i</span>t</span>
+
+  <nav class="tabs-top" aria-label="Main">
+    <a class="on" href="#" aria-current="page">feed</a>
+    <a href="#">network</a>
+    <a href="#">profile</a>
+    <a class="connect" href="#">+ connect</a>
+  </nav>
+
+  <span class="tc-pill listening"><i aria-hidden="true"></i>Listening</span>
+</header>
+
+<div class="content">
+
+  <main class="col-feed">
+    <h1 class="title">today in your network</h1>
+
+    <!-- EDIT: the two things a person can ask out loud -->
+    <p class="voice">
+      <i class="voice-dot" aria-hidden="true"></i>
+      <b>Ask out loud:</b>
+      <span class="q">“show me the advice I heard today”</span>
+      <span class="q soft">“what fits what I’m working on?”</span>
+    </p>
+
+    <nav class="tabs-feed" aria-label="Feed">
+      <a class="on" href="#" aria-current="true">everything</a>
+      <a href="#">advice</a>
+      <a href="#">skills</a>
+      <a href="#">people</a>
+    </nav>
+
+    <div class="stories">
+    <p class="label">today · at VexoHacks</p>
+
+    <!-- EDIT: the lines of the feed. One <article> is one line. -->
+
+    <!-- advice about a product: the brand sits in a chip under it -->
+    <article class="story">
+      <img class="face" src="https://res.cloudinary.com/subframe/image/upload/v1794695901/uploads/49550/yzwjohwsf1mqyfov9dhp.png" alt="" data-initial="L">
+      <div class="body">
+        <p class="head"><b class="name">Leo</b> <span>gave you advice · heard today</span> <time>2:10 pm</time></p>
+        <h2 class="line">Draw the first screens in Subframe</h2>
+        <p class="why"><i>because</i> you see the app before anyone writes code</p>
+        <p class="acts">
+          <span class="brand"><img src="https://res.cloudinary.com/subframe/image/upload/v1794696604/uploads/49550/jnumh7nbjasbbvac0dz1.png" alt="">Subframe</span>
+          <button type="button">use it</button>
+          <button type="button" class="soft">up</button>
+          <button type="button" class="soft">down</button>
+        </p>
+      </div>
+    </article>
+
+    <!-- advice that is not about a product -->
+    <article class="story">
+      <span class="face ring" aria-hidden="true">N</span>
+      <div class="body">
+        <p class="head"><b class="name">Noor</b> <span>gave you advice · heard today</span> <time>1:40 pm</time></p>
+        <h2 class="line">Talk to five customers before you write the deck</h2>
+        <p class="why"><i>because</i> the deck is a summary of what they told you</p>
+        <p class="acts">
+          <button type="button">keep it</button>
+          <button type="button" class="soft">up</button>
+          <button type="button" class="soft">down</button>
+        </p>
+      </div>
+    </article>
+
+    <!-- someone used a skill of mine -->
+    <article class="story">
+      <img class="face" src="https://res.cloudinary.com/subframe/image/upload/v1794695901/uploads/49550/yzwjohwsf1mqyfov9dhp.png" alt="" data-initial="L">
+      <div class="body">
+        <p class="head"><b class="name">Leo</b> <span>used your skill</span> <time>12:55 pm</time></p>
+        <h2 class="line">Give the bad news in the first minute</h2>
+        <p class="note">In his investor update</p>
+      </div>
+    </article>
+
+    <!-- a new skill from someone I follow: their own words in handwriting -->
+    <article class="story">
+      <img class="face" src="https://res.cloudinary.com/subframe/image/upload/v1794695901/uploads/49550/yzwjohwsf1mqyfov9dhp.png" alt="" data-initial="L">
+      <div class="body">
+        <p class="head"><b class="name">Leo</b> <span>shared a new skill</span> <time>12:10 pm</time></p>
+        <h2 class="line">Before you fix a bug, make it fail on demand</h2>
+        <p class="said">“If you can’t reproduce it, you’re guessing.”</p>
+        <p class="acts"><button type="button">send to my agent</button></p>
+      </div>
+    </article>
+
+    <!-- two people connected, and what they talked about -->
+    <article class="story">
+      <img class="face" src="https://res.cloudinary.com/subframe/image/upload/v1794695901/uploads/49550/me1stfjzwujkbxd9hdoq.png" alt="" data-initial="Y">
+      <div class="body">
+        <p class="head"><b class="name">You</b> <span>and</span> <b class="name">Kai</b> <span>connected</span> <time>11:20 am</time></p>
+        <h2 class="line">You talked about pricing a first pilot</h2>
+      </div>
+    </article>
+
+    <article class="story last">
+      <span class="face ring" aria-hidden="true">S</span>
+      <div class="body">
+        <p class="head"><b class="name">Sam</b> <span>shared a new skill</span> <time>yesterday</time></p>
+        <h2 class="line">A sales call ends with a dated next step</h2>
+        <p class="said">“A deal with no dated next step is a hope.”</p>
+        <p class="acts"><button type="button">send to my agent</button></p>
+      </div>
+    </article>
+    </div>
+  </main>
+
+  <aside class="col-people">
+    <section class="met">
+      <p class="label">people you met today</p>
+      <ul>
+        <li>
+          <img class="face big" src="https://res.cloudinary.com/subframe/image/upload/v1794695901/uploads/49550/yzwjohwsf1mqyfov9dhp.png" alt="" data-initial="L">
+          <p><b class="name">Leo</b><small>you follow his skills</small></p>
+        </li>
+        <li>
+          <span class="face big ring" aria-hidden="true">K</span>
+          <p><b class="name">Kai</b><small>connected · handshake</small></p>
+        </li>
+        <li>
+          <span class="face big ring" aria-hidden="true">N</span>
+          <p><b class="name">Noor</b><button type="button">connect</button></p>
+        </li>
+      </ul>
+    </section>
+
+    <!-- wide screens only -->
+    <section class="recommends">
+      <p class="label">your network recommends</p>
+      <ul>
+        <li><a href="#">Sketch on paper before Figma</a> <small>Noor, Kai</small></li>
+        <li><a href="#">A recorded update, not a meeting</a> <small>Sam</small></li>
+      </ul>
+      <p class="hint">Advice people gave you, kept in one place.</p>
+    </section>
+  </aside>
+
+</div>
+
+<!-- narrow screens only: the same four as the top bar -->
+<nav class="tabs-bottom" aria-label="Main">
+  <a class="on" href="#" aria-current="page">feed</a>
+  <a href="#">network</a>
+  <a class="connect" href="#">+ connect</a>
+  <a href="#">profile</a>
+</nav>
+
+<script>
+/* If a portrait or a logo cannot be loaded, show the dotted ring with the initial (or no logo). */
+document.querySelectorAll("img.face").forEach(function (img) {
+  img.addEventListener("error", function () {
+    var ring = document.createElement("span");
+    ring.className = img.className + " ring";
+    ring.setAttribute("aria-hidden", "true");
+    ring.textContent = img.dataset.initial || "";
+    img.replaceWith(ring);
+  });
+});
+document.querySelectorAll(".brand img").forEach(function (img) {
+  img.addEventListener("error", function () { img.remove(); });
+});
+</script>
+</body>
+</html>
