@@ -50,26 +50,35 @@
 <!-- ================================================= 2 · what the network gives you, and one person's page -->
 <section class="person" id="page">
   <div class="wrap person-grid">
-    <!-- EDIT: the example person. Name, one line about her, three skills. -->
+    <!-- EDIT: the example person (invented). Same parts as the profile screen in the app:
+         portrait, name and handle, three numbers, facts, short pills, three skills each with where it came from, what she recommends. -->
     <article class="card page" aria-label="An example page: Maya">
-      <!-- the portrait is drawn in landing.js (FACES) from a small map of marks -->
-      <canvas class="face" data-face="maya" aria-hidden="true"></canvas>
-      <p class="nm">Maya</p>
-      <p class="bio">Founder of a six-person startup. Ten years in product.</p>
+      <header class="who">
+        <!-- the portrait is drawn in landing.js (FACES) from a small map of marks -->
+        <canvas class="face" data-face="maya" aria-hidden="true"></canvas>
+        <div>
+          <p class="nm">Maya</p>
+          <p class="at">@maya</p>
+        </div>
+      </header>
+      <p class="stats"><span><b>5</b>skills</span><span><b>3</b>posts</span><span><b>2</b>recommendations</span></p>
+      <dl class="facts">
+        <div><dt>based in</dt><dd>San Francisco</dd></div>
+        <div><dt>company</dt><dd>Six-person startup</dd></div>
+        <div><dt>met at</dt><dd>VexoHacks · Nov 14</dd></div>
+        <div><dt>expertise</dt><dd class="pills"><span class="pill">Product</span><span class="pill">Fundraising</span><span class="pill">Small teams</span></dd></div>
+        <div><dt>worth knowing</dt><dd class="pills"><span class="pill out">Ex-designer</span><span class="pill out">Ten years in product</span><span class="pill out">Mentors founders</span></dd></div>
+      </dl>
+      <!-- a skill is one line; on the right, where it came from -->
       <ul class="skills">
-        <li class="skill">
-          <p class="st">Open an update with the number</p>
-          <p class="said">&ldquo;They forget the story. They remember 40%.&rdquo;</p>
-        </li>
-        <li class="skill">
-          <p class="st">Give the bad news in the first minute</p>
-          <p class="said">&ldquo;Bad news goes first, or they doubt the rest.&rdquo;</p>
-        </li>
-        <li class="skill">
-          <p class="st">Cut the feature before the deadline does</p>
-          <p class="said">&ldquo;Cut on Monday, or apologise on Friday.&rdquo;</p>
-        </li>
+        <li class="skill"><span class="st">Treat a maybe as a no</span><span class="src">LinkedIn</span></li>
+        <li class="skill"><span class="st">Bad news goes first</span><span class="src">Claude Code</span></li>
+        <li class="skill"><span class="st">Cut scope on Mondays</span><span class="src now">today</span></li>
       </ul>
+      <!-- each logo is the icon of the product's own site (the "domain" in the address) -->
+      <dl class="facts rec">
+        <div><dt>recommends</dt><dd class="pills"><span class="pill out"><img data-logo src="https://www.google.com/s2/favicons?domain=linear.app&amp;sz=64" alt="" width="64" height="64">Linear</span><span class="pill out"><img data-logo src="https://www.google.com/s2/favicons?domain=granola.ai&amp;sz=64" alt="" width="64" height="64">Granola</span></dd></div>
+      </dl>
       <button class="follow" type="button" aria-pressed="false" data-follow data-on="following · her new skills reach your agent" data-off="follow maya's skills">follow maya's skills</button>
     </article>
 

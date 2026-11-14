@@ -117,19 +117,36 @@ h2{ font:400 clamp(2rem, 4.3vw, 3.5rem)/1.03 var(--serif); letter-spacing:-.01em
 .person,.how{ padding:clamp(3rem,7vw,6rem) 0; }
 .person-grid{ display:grid; grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr); gap:clamp(2rem,6vw,5.5rem); align-items:center; }
 .card{ position:relative; background:var(--paper); color:var(--ink); border-radius:1.3rem; box-shadow:0 .9rem 2.4rem rgba(20,16,40,.3); }
-.page{ width:100%; max-width:29rem; justify-self:center; padding:1.5rem 1.6rem 1.4rem; }
-/* a person's portrait in round dots, on a small piece of the lavender ground */
-.face{ position:absolute; right:1.4rem; top:1.4rem; width:8rem; height:8.8rem; border-radius:1.1rem;
+.page{ width:100%; max-width:30rem; justify-self:center; padding:1.4rem 1.5rem 1.4rem; }
+/* top row: a portrait in round dots on a small piece of the lavender ground, the name in handwriting, the handle */
+.who{ display:flex; align-items:center; gap:1.2rem; }
+.face{ flex:none; display:block; width:5.8rem; height:6.8rem; border-radius:1rem;
   background:radial-gradient(90% 70% at 50% 108%, #F4B6D2 0%, rgba(244,182,210,0) 70%), linear-gradient(160deg,#7A6FC3 0%,#9A8EDB 50%,#6A5FB3 100%); }
-.page .bio{ max-width:calc(100% - 9rem); min-height:5rem; }
-.nm{ display:inline-block; margin:0 0 .25rem; font:700 4rem/1 var(--hand); transform:rotate(-3deg); transform-origin:left bottom; }
-.bio{ font:400 1.42rem/1.2 var(--serif); }
-.skills{ margin-top:.8rem; padding-top:.5rem; border-top:1px dashed var(--line); }
-.skill{ display:grid; grid-template-columns:.95rem minmax(0,1fr); gap:0 .6rem; align-items:baseline; padding:.45rem 0; }
+.nm{ display:inline-block; font:700 3.8rem/1 var(--hand); transform:rotate(-3deg); transform-origin:left bottom; }
+.at{ margin-top:.35rem; font:500 .88rem/1 var(--mono); color:var(--soft); }
+/* three numbers */
+.stats{ display:flex; flex-wrap:wrap; justify-content:space-between; gap:.3rem 1rem; margin-top:.9rem; padding-bottom:.85rem; border-bottom:1px dashed var(--line);
+  font:400 .98rem/1 var(--sans); color:var(--soft); }
+.stats span{ white-space:nowrap; }
+.stats b{ margin-right:.3rem; font:400 2.2rem/1 var(--serif); color:var(--ink); }
+/* facts: the label in serif italics, the value beside it; expertise and "worth knowing" are short pills */
+.facts{ display:grid; gap:.6rem; margin:0; padding:.85rem 0; }
+.facts > div{ display:grid; grid-template-columns:6.6rem minmax(0,1fr); gap:0 .6rem; align-items:baseline; }
+.facts dt{ font:italic 400 1.32rem/1.05 var(--serif); color:var(--acc); }
+.facts dd{ margin:0; font:600 1.08rem/1.2 var(--sans); }
+.facts.rec{ padding:.3rem 0 0; }
+.pills{ display:flex; flex-wrap:wrap; gap:.4rem; }
+.pill{ display:inline-flex; align-items:center; gap:.4rem; padding:.36rem .8rem; border-radius:2rem; background:#E6E0F5; font:600 .94rem/1.1 var(--sans); white-space:nowrap; }
+.pill.out{ background:transparent; box-shadow:inset 0 0 0 1.5px var(--ink); }
+.pill img{ display:block; width:1.2rem; height:1.2rem; margin-left:-.2rem; border-radius:.3rem; }
+/* three skills, one line each; on the right, where the skill came from */
+.skills{ padding-top:.5rem; border-top:1px dashed var(--line); }
+.skill{ display:grid; grid-template-columns:.8rem minmax(0,1fr) auto; gap:0 .6rem; align-items:baseline; padding:.42rem 0; }
 .skill::before{ content:""; width:.8rem; height:.8rem; align-self:start; margin-top:.36rem; color:var(--acc);
   background:linear-gradient(currentColor,currentColor) center/100% .17rem no-repeat, linear-gradient(currentColor,currentColor) center/.17rem 100% no-repeat; }
 .st{ font:600 1.14rem/1.22 var(--sans); }
-.said{ grid-column:2; margin-top:.08rem; font:600 1.5rem/1.08 var(--hand); color:var(--acc); }
+.src{ font:400 .92rem/1.1 var(--sans); color:var(--soft); white-space:nowrap; }
+.src.now{ padding:.22rem .6rem; border-radius:2rem; background:#E6E0F5; color:var(--ink); font-weight:600; }
 .follow{ display:block; width:100%; margin-top:.9rem; padding:.85rem 1rem; border-radius:.9rem; border:1.5px solid var(--ink); background:var(--ink); color:var(--paper);
   font:600 1.02rem/1.15 var(--sans); cursor:pointer; }
 .follow[aria-pressed="true"]{ background:transparent; color:var(--ink); }
@@ -198,7 +215,7 @@ h2{ font:400 clamp(2rem, 4.3vw, 3.5rem)/1.03 var(--serif); letter-spacing:-.01em
 }
 @media (max-width:560px){
   .page{ padding:1.2rem 1.15rem 1.2rem; }
-  .face{ right:1.1rem; top:1.2rem; width:7rem; height:7.7rem; }
-  .page .bio{ max-width:calc(100% - 7.8rem); }
+  .who{ gap:1rem; }
+  .face{ width:5.4rem; height:6.3rem; }
   .nm{ font-size:3.4rem; }
 }
