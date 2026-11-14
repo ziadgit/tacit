@@ -33,6 +33,7 @@ What the feed is:
 Type on this screen: the serif is used for the page title only; everything else the product says is in
 Instrument Sans; handwriting is for a person's name and their own words.
 
-Not done: the other three tabs, any data, the voice commands, links between screens. The two dot portraits
-and the brand logo are loaded from the Subframe project's image links; if one cannot be loaded, the page
-shows a dotted ring with the initial (or the chip without a logo).
+Not done: the other three tabs, any data, the voice commands, links between screens.
+
+The two dot portraits and the brand logo are files in `feed/img/` (copied from the Subframe project). If one
+cannot be loaded, the page shows a dotted ring with the initial, or the chip without a logo.
