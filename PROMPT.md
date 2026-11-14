@@ -1,23 +1,24 @@
-# Build tacit (unattended, 75-minute time box)
+# Build tacit (unattended, 150-minute time box)
 
 Run from the repo root:
 
     claude --dangerously-skip-permissions -p "$(cat PROMPT.md)"
 
 You are running with `--dangerously-skip-permissions` in this repo. Build what `SPEC.md`
-describes by working through `fix_plan.md` top to bottom, in this one session, in **75 minutes
+describes by working through `fix_plan.md` top to bottom, in this one session, in **150 minutes
 of wall-clock time**.
 
 ## Start
 
 1. Run `date +%s > .build_start` (it's gitignored). That is t=0.
 2. Read `SPEC.md` in full (the source of truth, **§0 safety rules first**), `fix_plan.md`,
-   `CLAUDE.md`, `design-system/README.md`, and `.claude/skills/build-with-exa/SKILL.md`.
+   `CLAUDE.md`, `design-system/README.md`, `.claude/skills/build-with-exa/SKILL.md`, and before any band item
+   `vexo-open-kit/AGENTS.md` and `vexo-open-kit/projects/gesture-trainer/recogniser.js`.
 3. `uv sync`, then `.venv/bin/ruff check . && .venv/bin/pytest -x -q` must pass before you begin.
 
 ## For each unchecked `- [ ]` item, in order
 
-1. **Check the clock:** `echo $(( $(date +%s) - $(cat .build_start) ))`. If 70 minutes (4200 s)
+1. **Check the clock:** `echo $(( $(date +%s) - $(cat .build_start) ))`. If 145 minutes (8700 s)
    or more have passed, go to "Finish" now.
 2. **Implement the item fully.** No `TODO`s, no stubs, no placeholder data in the product.
    Tests sit beside the code (`foo.py` → `foo_test.py`).

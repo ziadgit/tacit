@@ -53,6 +53,9 @@ Tests live beside the code as `*_test.py`, no network (respx + fakes).
 - One Bluetooth connection at a time: close the dashboard before running code.
 - Keep `speech.listen` and other slow work out of `band.on(...)` handlers.
 - Develop against the pretend band first: `Band.connect(band_no, transport="sim")`.
+- **Mute is safety-critical** (SPEC §13.2): an X or a figure 8 in the air, a stop phrase, or the
+  PWA mutes at once (mic off, rewind the last 15 s). Unmuting needs the gesture plus a double-tap.
+  Never weaken this path, and keep it working offline.
 
 ## Social: how Tacit knows about other bands
 

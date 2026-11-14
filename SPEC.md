@@ -17,9 +17,12 @@ This build covers the landing page's journey, phone first:
    the ones they want. Others can follow them.
 4. **Learn from people.** Following someone shows their public skills. Their followers-only
    skills unlock with a one-time **Stripe** payment, in test mode.
+5. **The wristband notices everything** (§13). The Vexo band's mic and motion feed a wide set
+   of detectors: advice given and received, explanations, lessons, commitments, writing,
+   drawing and more. Advice becomes draft skills and passes in the social feed. Drawing an
+   **X or a figure 8 in the air mutes the band**.
 
-The **Raspberry Pi hub** (§13) is secondary. It runs the band bridge for the team's own bands,
-works offline and syncs later.
+The **Raspberry Pi hub** (§13.8) is secondary. It runs the same bridge off-grid and syncs later.
 
 Every decision here is final. Do not re-open it. If something is truly impossible as written,
 make the smallest change, record it under "Gotchas" in `CLAUDE.md`, and move on.
@@ -36,7 +39,7 @@ in this file.
 - **Never deploy.** No `fly` commands at all (`fly launch`, `fly deploy`, `fly secrets`, ...).
   The build only writes the deploy files (§16).
 - **Never connect to a real band.** Use the pretend band only (`transport="sim"`), and only with
-  numbers from `TEAM_BANDS`.
+  numbers from `TEAM_BANDS`. Never run `tacit bridge` or `tacit gestures record` without `--sim`.
 - Never read, print, log or commit secrets. Never `cat .env`. Never print `os.environ`.
 - **Do not edit** `vexo-open-kit/` (reference clone), `landing/` or `design-system/` (a
   teammate's work). Read them. Serve them. Copy from `design-system/components/bundle.*` into
@@ -62,8 +65,13 @@ src/tacit/
   interview.py   Vapi: assistant body, tools, webhook handling, VapiApi (§7)
   payments.py    Stripe Checkout + webhook (§10)
   app.py         create_app() FastAPI (§11)
-  hub.py         band bridge for the Pi hub (§13, P2)
-  cli.py         doctor | serve | vapi-sync | hub
+  bridge.py      the band bridge: streams, mute, upload, offline buffer (§13.1, §13.2, §13.7)
+  gestures.py    X / figure-8 recogniser, a port of the kit's gesture trainer (§13.2)
+  gesture_templates.json   built-in X and figure-8 templates (made by scripts/)
+  motion.py      writing / drawing / whiteboard / typing / making detectors (§13.6)
+  scenarios.py   windows, Jev classification, extraction, moments, passes (§13.4, §13.5)
+  llm.py         OpenAI Responses API over httpx, JSON-schema output (§13.4)
+  cli.py         doctor | serve | vapi-sync | bridge | gestures
   *_test.py      tests beside code
 pwa/             the mobile-first PWA, no build step (§12)
 Dockerfile  .dockerignore  fly.toml   deployment to Fly.io (§16)
@@ -82,7 +90,14 @@ and `chdir`s to `tmp_path`, so tests never read the real `.env`.
 |---|---|---|
 | tacit_band | `int \| None`, must be in `TEAM_BANDS` | None (exists) |
 | deepgram_api_key, openai_api_key, exa_api_key, typesafe_api_key, vapi_api_key | `SecretStr \| None` | None (exist) |
-| vapi_server_secret, session_secret, stripe_secret_key, stripe_webhook_secret, hub_token | `SecretStr \| None` | None |
+| vapi_server_secret, session_secret, stripe_secret_key, stripe_webhook_secret | `SecretStr \| None` | None |
+| tacit_bridge_token | `SecretStr \| None` | None (bridge side: from pairing, §13.1) |
+| tacit_server_url | `str \| None` | None (bridge side: where to upload; defaults to `public_base_url`) |
+| openai_model | str | `"gpt-6-luna"` (as the kit's `ai.py`) |
+| scenario_threshold | float | 0.6 |
+| windows_per_hour | int | 40 |
+| mute_rewind_s | int | 15 |
+| bridge_buffer_mb | int | 500 |
 | vapi_assistant_id, vapi_phone_number_id | `str \| None` | None |
 | tacit_phone_display | `str \| None` | None (the inbound number shown in the PWA, e.g. "(415) 555-0100") |
 | public_base_url | `str \| None` | None (https, no trailing slash) |
@@ -343,8 +358,9 @@ shown to the owner (§12) and the owner decides.
   appear only with `title` (verdict/reason/quote `null`, `locked: true`) unless the viewer is the
   owner or has a `paid` follow.
 - `POST /api/follow/{id}` (free follow; following yourself → 400), `DELETE /api/follow/{id}`.
-- `GET /api/feed` → published public skills (and unlocked followers-only ones) from people the
-  viewer follows, newest first, max 50.
+- `GET /api/feed` → typed feed items (§13.5): published skills (public, and unlocked
+  followers-only ones), passes, shared creative sessions and posts from people the viewer
+  follows, plus the viewer's own private picked-up items. Newest first, max 50.
 
 ## 10. Payments with Stripe (`payments.py`), test mode only
 
@@ -431,9 +447,21 @@ Generate the PNG icons with a small stdlib-only Python script in `scripts/make_i
   when below, nothing when null), edit, publish, public/followers, remove.
 - `#/people` and `#/people/:id`: PersonRings with handwritten first names; a person's page
   with their skills, follow / unfollow, and "unlock followers-only skills for $X" → checkout.
-- `#/feed`: skills from people you follow.
-- `#/me`: consents (toggleable), "delete everything" (asks twice in-page; **no
-  `confirm()`/`alert()`**), sign-out = clear the cookie.
+- `#/feed`: typed items (§13.5) as SkillCards, PassChips (the orange "lit" colour only while a
+  pass is new, then off), creative sessions ("ana sketched for 25 minutes") and posts. Your own
+  picked-up items are marked "only you see this".
+- `#/moments`: the wearer's private timeline, grouped by hour: every detected moment with its
+  kind, time and confidence; keep / dismiss / share (share only for recommendation, lesson and
+  idea); a draft skill links to `#/skills`.
+- `#/me`: consents (toggleable); **your band**: connect a band (16 or 74; the token is shown
+  once, with the two `.env` lines for the bridge), its live state, a big **mute / unmute**
+  button, a reminder of the gestures (draw an X or a figure 8 to mute; the same, then a
+  double-tap, to unmute; double-tap to keep the last minute), a toggle per scenario kind, and
+  "share creative sessions" (off); "delete everything" (asks twice in-page; **no
+  `confirm()`/`alert()`**); sign-out = clear the cookie.
+- **ListeningPill**, top right on every screen, shown **only** while the wearer's bridge reports
+  `listening` (polled every 5 s). It is the only blue in the app. Muted: the pill says "muted",
+  in cream, not blue.
 
 Rules:
 - All data from the API is set with `textContent` or attributes, never `innerHTML`.
@@ -451,36 +479,212 @@ manifest and registers `/app/sw.js` with scope `/app/`; no `innerHTML`, `eval(`,
 `confirm(` or external `fetch` in `pwa/*.js` (excluding vendor); `sw.js` never caches
 `/api/`; TestClient serves `/app/`, `/app/sw.js` (no-cache) and the manifest content type.
 
-## 13. Raspberry Pi off-grid hub (secondary, P2)
+## 13. The band: bridge, mute gestures, scenario detection
 
-A Raspberry Pi 4/5 (64-bit Raspberry Pi OS, Python 3.11, BlueZ) sits in a room as a hub for
-**one of the team's own bands**. It must keep working with no internet.
+tacit is **maximalist about noticing** and **conservative about sharing**. While capture is on,
+it tries to detect every scenario in the catalogue (§13.3) from the wrist's microphone and
+motion. Each detection is a **moment**, private to the wearer. A moment reaches the social feed
+only by the rules in §13.5. Detection is generous; publishing is never automatic, except for
+the content-free kinds a user explicitly turned on.
 
-- **Same code, different command:** `tacit hub` (in `hub.py`) connects to `TACIT_BAND` with the
-  Vexo kit (`use_kit()`, `Band.connect(band, auto_reconnect=True)`). It turns on `events` and
-  `mic_level` at all times and `audio` **only while capture is on**. A double-tap toggles
-  capture. The band's own solid blue LED is the listening sign; never cover or disable it.
-- **Online:** stream the Opus packets to Deepgram with the kit's `speech.py`
-  (`mip_opt_out=true`). Final transcript segments go to `POST /api/hub/segments` (Bearer
-  `HUB_TOKEN`, `{band, started_at, text}`) on the server (the Fly.io app, §16). The server stores them for later
-  conversation-skill extraction (`source="conversation"`, a later spec). It keeps segments 24 h
-  at most.
-- **Offline:** write Opus packets to `data/hub/<date>/<hh>.opus-packets` (length-prefixed),
-  capped at `HUB_BUFFER_MB` (default 500) and 24 h, oldest dropped first. When online again,
-  transcribe the buffer with Deepgram's prerecorded API, upload the segments, then **delete the
-  audio**. Upload retries use exponential backoff (max 5 min).
-- **No band other than `TACIT_BAND`, ever.** The hub never scans for other bands.
-- Status: `GET http://<pi>:8000/healthz` with band connected / capture / buffer MB / last sync.
-  `tacit serve` can run on the Pi too, so phones on the hub's Wi-Fi get the PWA locally.
-  Exa/Vapi/Stripe features show "needs internet" (`/api/config` flags them off when unreachable).
-- Ship `deploy/pi/tacit-hub.service` (systemd, `Restart=always`, runs as user `tacit`,
-  `WorkingDirectory=/opt/tacit`, `EnvironmentFile=/opt/tacit/.env`) and
-  `deploy/pi/README.md` (install uv, clone, `scripts/bootstrap.sh`, pair Bluetooth, enable the
-  service; optional: hostapd for an off-grid Wi-Fi network). These are files only; the build
-  never runs them.
-- Tests: the hub against the pretend band (`transport="sim"`, `audio_packets` from the kit's
-  sample), with a fake speech client and a fake uploader. Cover buffering when the uploader
-  fails, the size cap, deleting after upload, and the double-tap toggle.
+### 13.1 The bridge (`bridge.py`, `tacit bridge`)
+
+The bridge is the program connected to a band. It runs on a laptop (the demo) or on the Pi
+(§13.8), with the same code.
+
+- It connects to `TACIT_BAND` only (`use_kit()`, `Band.connect(band, auto_reconnect=True)`) and
+  checks `band.number`. It never scans for, lists or connects to another band.
+- On every connect and `reconnected` it applies `set_motion(accel_range=8, gyro_range=1000)`
+  and `configure(events=True, motion=100, sensors="both", activity=1, battery=60)`. While
+  listening it adds `audio=True, mic_level=0.1`. (Motion at 100 Hz with both sensors is within
+  the Bluetooth limit with audio on, rule 14 in the kit's AGENTS.md.)
+- Before the microphone first starts, it prints the kit's line that the sound goes to Deepgram.
+  It streams Opus to Deepgram with the kit's `speech.create(...)`, passing `model=nova-3`,
+  `endpointing=300`, `diarize="true"`, and up to 20 `keyterm`s from the wearer's kept context.
+  `mip_opt_out=true` stays (the kit fixes it).
+- **Pairing.** In the PWA (`#/me` → "connect a band"), the wearer picks 16 or 74. The server
+  checks it is in `TEAM_BANDS` and not linked to another user, then creates a `BridgeDevice`
+  and shows a token **once**. Only its SHA-256 is stored. The bridge's `.env` gets
+  `TACIT_BRIDGE_TOKEN` and `TACIT_SERVER_URL` (the Fly URL, §16).
+- **Bridge API** (Bearer bridge token, else 401; rate-limited per device):
+  - `POST /api/bridge/state`, every 10 s: `{connected, listening, muted, battery, buffer_mb}`.
+  - `GET /api/bridge/commands`, polled every 2 s: `{"muted": bool}`, as set from the PWA.
+  - `POST /api/bridge/segments`: final transcript segments (§13.4).
+  - `POST /api/bridge/moments`: motion sessions and gesture events (§13.6).
+  - `POST /api/bridge/rewind` `{seconds}`: deletes this device's segments from the last N
+    seconds, and any moment built only from them.
+- **Raw motion never leaves the bridge.** Only session summaries do. Raw audio leaves only
+  to Deepgram, or sits in the offline buffer (§13.7).
+
+### 13.2 Mute: draw an X or a figure 8 in the air
+
+Mute is safety-critical, so it is **easy to trigger and hard to undo**.
+
+- **States.** `listening` means `audio` and `mic_level` are on, and the band's LED is solid blue
+  by itself (kit rule 4). `muted` means both are off and the Deepgram stream is stopped. On
+  entering mute, the LED blinks white twice (`set_led("#ffffff", pattern="blink",
+  period=200)` for 0.8 s), then goes off. **Blue light = listening; no blue = not listening.**
+- **To mute:** draw an **X** or a **figure 8** in the air. The mic must be off within 1 s of the
+  gesture ending. In the motion handler, the gesture check runs before anything else.
+- **Rewind on mute.** People mute right after something they didn't want kept. On mute, the
+  bridge drops whatever audio and segments it hasn't uploaded from the last `MUTE_REWIND_S`
+  (default 15 s), and calls `/api/bridge/rewind` with the same number of seconds.
+- **To unmute:** the same gesture, **then a double-tap within 3 s**, or "unmute" in the PWA.
+  Mute never times out.
+- The muted state is saved in `data/bridge-state.json`. After a restart, a crash or a
+  reconnect, the bridge comes back muted if it was muted. The PWA's mute button sets the server
+  command, and the bridge applies it within one poll (≤ 2 s).
+- **Someone asks to stop.** If a final segment matches
+  `\b(stop recording|turn (it|that) off|don'?t record|off the record|mute (it|that))\b` (case
+  insensitive), the bridge mutes at once, with the rewind. The server also checks every window
+  with Jev (`stop_request`, §13.4). If that fires, it sets the mute command and rewinds 60 s.
+- **The recogniser** (`gestures.py`: pure functions, no band). It is a Python port of the kit's
+  `projects/gesture-trainer/recogniser.js` (`Segmenter`, `to_shape`, `match`), with the same
+  constants at the top and the same comment that they are untested guesses. Two thresholds:
+  `MUTE_LIMIT` (looser; a near-miss still mutes) and `UNMUTE_LIMIT` (stricter). Built-in
+  templates for `x` and `figure8` live in `src/tacit/gesture_templates.json`. They are made by
+  `scripts/make_gesture_templates.py`, which turns a drawn path (two crossing strokes; a
+  lemniscate) into wrist turning rates and accelerations, and then into `to_shape` points.
+  `tacit gestures record x|figure8 [--sim]` saves 3 of the wearer's own examples to
+  `data/gestures.json`, used alongside the built-ins.
+- **Other band gestures.** **Double-tap = "keep that"** (when not in the unmute window): it
+  marks the last 60 s. The server runs every text detector on that window with
+  `forced=True` and always makes a `kept` moment, even when nothing is detected. Single tap,
+  free-fall and tilt do nothing (too common to mean something).
+- Tests (pretend band + `play_motion`): an X and a figure 8 each mute within 1 s; the rewind
+  call is sent; the LED blinks then turns off; unmute needs the gesture *and* the double-tap;
+  the pretend band's own swing, a shake and a still hand never mute; the state survives a
+  restart; the stop-phrase regex mutes.
+
+### 13.3 The scenario catalogue
+
+| kind | from | how | goes to |
+|---|---|---|---|
+| `stop_request` | audio | regex on the bridge + Jev | **mute + rewind** (§13.2) |
+| `conversation` | audio | ≥ 2 diarized speakers within 2 min | private span |
+| `advice_given` | audio | Jev + extraction; giver = wearer | **draft skill** (§13.5) |
+| `advice_received` | audio | Jev + extraction; giver = other | private "picked up"; a **pass** if matched |
+| `explanation` | audio | a how-to with steps | draft skill (verdict holds the steps) |
+| `lesson` | audio | "the mistake we made was…" | draft skill |
+| `question` | audio | the wearer asks for advice | private; shows people in their network with a matching skill |
+| `decision` | audio | "let's go with X" | private |
+| `commitment` | audio | "I'll send it tomorrow" | private, with the due text |
+| `recommendation` | audio | a book, tool, person or place called worth it | private; shareable as a post |
+| `idea` | audio | a new idea said out loud | private |
+| `presenting` | audio + motion | the wearer speaks ≥ 3 min, mostly alone, gesturing | private span |
+| `writing` | motion | handwriting | creative session |
+| `drawing` | motion | sketching | creative session |
+| `whiteboard` | motion | drawing with the forearm raised | creative session |
+| `typing` | motion | keyboard bursts | focus session (private) |
+| `making` | motion | sustained rhythmic tool use | creative session (low confidence) |
+| `walking_meeting` | motion + audio | walking + a conversation | private span |
+| `demonstration` | audio + motion | an explanation during drawing, whiteboard or making | draft skill, **ranked first** |
+| `kept` | double-tap | the last 60 s | private; detectors forced on it |
+
+Each kind can be switched off in `#/me`; they all start **on**.
+
+### 13.4 Text detectors (`scenarios.py`, `llm.py`, on the server)
+
+- **Segments.** `{started_at, ended_at, speaker (Deepgram diarized int), text, level}`, where
+  `level` is the median `rms_db` from `mic-level` during the segment. **A lower `rms_db` is
+  louder** (the kit's dashboard draws 52 as empty and 12 as full). The likely wearer is the
+  speaker with the lowest median level, by ≥ 6 dB. Otherwise the wearer is unknown and Jev
+  decides.
+- **Windows.** A window is up to 3 minutes of segments, with 30 s overlap. One runs after 90 s
+  of new speech, after 20 s of silence, and at once on "keep that". Lines are written
+  `S0 (likely wearer): …`. There is a cap of `windows_per_hour` (default 40) per device.
+- **Step 1, Jev classifies** (one `system_one` call per window): a `Noul` per kind (`advice`,
+  `explanation`, `lesson`, `question`, `decision`, `commitment`, `recommendation`, `idea`,
+  `stop_request`), plus `Choice` `giver` ∈ {`wearer`, `other`, `both`, `none`} with criteria for
+  each. A probability ≥ `scenario_threshold` (default 0.6) moves that kind to step 2. Jev
+  unavailable → no detections for that window (never guess). Tests use a fake Jev.
+- **Step 2, extraction** (`llm.py`): OpenAI Responses API over httpx, `POST
+  https://api.openai.com/v1/responses` `{model: settings.openai_model, input, text: {format:
+  {type: "json_schema", name, schema, strict: true}}}`, read the output text, parse JSON. The
+  default model is `"gpt-6-luna"`, the same as the kit's `ai.py`. One schema per kind: advice
+  / explanation / lesson / demonstration → `{title, verdict, reason, quote, giver, steps[]}`;
+  commitment → `{what, who, when_text}`; decision → `{what, why}`; recommendation → `{thing,
+  kind, why}`; question → `{question, topic}`; idea → `{idea}`. Tests use respx.
+- **No invented quotes.** A `quote` is kept only if it appears in the window text, compared
+  with case and whitespace normalised. Otherwise it is set to null.
+- **Dedup.** Same kind, title token Jaccard ≥ 0.6, within 30 min → merge into the earlier moment.
+- **Retention.** Segments are deleted after 24 h, and at once on rewind. Moments and skills stay
+  until the user removes them.
+
+### 13.5 Moments, skills, passes and the feed
+
+- **`advice_given`, `explanation`, `lesson`, `demonstration` with the wearer as giver** → a
+  draft `Skill` (`source="conversation"`), checked by Jev as in §8 and linked to the moment.
+  It appears in followers' feeds only after the owner publishes it.
+- **`advice_received`** → a private "picked up" item for the wearer: title, verdict, reason,
+  credited to "someone you talked with". The quote and the giver's words are kept **only if
+  the giver is a matched tacit user** (below).
+- **Passes.** Two linked devices whose `conversation` moments overlap by ≥ 60 s are in the same
+  conversation. An `advice_given` on one and an `advice_received` on the other, within ±2 min
+  (or title Jaccard ≥ 0.4), make a `Pass {giver_id, receiver_id, skill_id}`. When the giver
+  publishes that skill, both feeds get a pass item (a PassChip: "maya passed *open an update
+  with the number* to ana"). The receiver's picked-up item then shows the giver's name. Bands
+  16 and 74 are the test pair. This is the only way one person's band data affects another
+  person, and it happens on the server, never over Bluetooth.
+- **Creative sessions** (`writing`, `drawing`, `whiteboard`, `making` ≥ 5 min) → a private
+  moment with its duration. If the user turned on "share creative sessions" (off by default),
+  followers see a content-free item: "ana sketched for 25 minutes".
+- **Everything else** stays in the private `#/moments` timeline. The wearer can turn a
+  `recommendation`, `lesson` or `idea` into a feed **post** by hand.
+- `GET /api/feed` returns typed items, newest first, max 50: `skill`, `pass`, `creative` and
+  `post` from people you follow (and passes involving you), plus your own `picked_up` items
+  (only you see these). `GET /api/moments` returns the wearer's own moments.
+  `PATCH /api/moments/{id}` `{status: kept | dismissed | shared}`.
+- Domain additions: `BridgeDevice(id, user_id, band, token_sha256, muted, last_state,
+  last_seen)`, `Segment`, `Moment(id, user_id, kind, started_at, ended_at, title, body: dict,
+  confidence, source: audio|motion|both, status: new|kept|dismissed|shared, skill_id?)`,
+  `Pass`, `FeedItemOut`. `delete_user` also deletes these.
+
+### 13.6 Motion detectors (`motion.py`, on the bridge, pure functions)
+
+- Input: 100 Hz motion. Windows are 4 s with a 2 s hop. Features, in pure Python (no numpy):
+  accel-magnitude std, gyro-magnitude mean and std, dominant gyro frequency (autocorrelation
+  peak, 0.5–12 Hz), forearm pitch from low-pass gravity, the fraction of still samples, and
+  burstiness (short spikes per second).
+- Rules, as constants at the top (guesses to tune on a real wrist, said so in a comment,
+  as the kit does):
+  - `writing`: gyro mean 15–120 °/s, dominant 3–8 Hz, accel std < 0.15 g, wrist pitched down.
+  - `drawing`: gyro mean 10–150 °/s, dominant 0.5–3 Hz, accel std 0.05–0.4 g, with pauses.
+  - `whiteboard`: drawing-like with forearm pitch > 30° up.
+  - `typing`: high burstiness at 5–12 Hz, gyro mean < 20 °/s, wrist level.
+  - `making`: rhythmic 1–3 Hz, accel std > 0.3 g, ≥ 2 min.
+  - `gesturing`: intermittent large motions while speech is active (feeds `presenting` and
+    `demonstration`).
+- **Sessions** use hysteresis: a session starts after 60 s with ≥ 70% of windows matching, and
+  ends after 45 s without a match. Only sessions ≥ 2 min are reported. Confidence = the share of
+  matching windows. Only `{kind, started_at, ended_at, confidence}` is uploaded.
+- Tests: a helper makes synthetic signals for each kind (sine mixes plus noise); each is
+  labelled right, and the pretend band's swing is labelled nothing. One end-to-end run uses
+  `play_motion`.
+
+### 13.7 Offline buffering (bridge, anywhere)
+
+- No internet: Opus packets go to `data/bridge/<date>/<hh>.opus-packets` (length-prefixed),
+  capped at `BRIDGE_BUFFER_MB` (default 500) and 24 h, oldest dropped first. Motion sessions
+  and gesture events queue in `data/bridge/queue.jsonl`. **Mute still works offline**
+  (it is local), and a rewind also deletes buffered audio.
+- Back online: transcribe the buffer with Deepgram's prerecorded API (`diarize=true`), upload
+  the segments, **then delete the audio**. Upload retries use exponential backoff, max 5 min.
+- Tests: buffering while the uploader fails, the size cap, deletion after upload, rewind
+  deleting buffered audio.
+
+### 13.8 On a Raspberry Pi (secondary, P2)
+
+- A Pi 4/5 (64-bit Raspberry Pi OS, Python 3.11, BlueZ) runs `tacit bridge` for one of the
+  team's own bands as an off-grid hub. `tacit serve` can run on it too, so phones on the Pi's
+  Wi-Fi get the PWA locally. Exa, Vapi and Stripe show "needs internet" (`/api/config` flags
+  them off when unreachable).
+- `GET http://<pi>:8000/healthz` adds `{band_connected, listening, muted, buffer_mb, last_sync}`
+  when a bridge runs there.
+- Ship `deploy/pi/tacit-bridge.service` (systemd, `Restart=always`, user `tacit`,
+  `WorkingDirectory=/opt/tacit`, `EnvironmentFile=/opt/tacit/.env`) and `deploy/pi/README.md`
+  (install uv, clone, `scripts/bootstrap.sh`, pair Bluetooth, enable the service; optionally
+  hostapd for an off-grid Wi-Fi network). These are files only; the build never runs them.
 
 ## 14. CLI (`cli.py`)
 
@@ -492,7 +696,9 @@ A Raspberry Pi 4/5 (64-bit Raspberry Pi OS, Python 3.11, BlueZ) sits in a room a
 - `tacit serve [--host 127.0.0.1] [--port 8000]`
 - `tacit vapi-sync [--dry-run]`: PATCH if `VAPI_ASSISTANT_ID` is set, else POST and print "Add
   VAPI_ASSISTANT_ID=<id> to .env". `--dry-run` prints the body with every secret as `"***"`.
-- `tacit hub [--sim]` (P2)
+- `tacit bridge [--sim]`: runs the bridge (§13.1). `--sim` uses the pretend band with the kit's
+  sample speech as its voice and a fake speech client unless `DEEPGRAM_API_KEY` is set.
+- `tacit gestures record x|figure8 [--sim]`: records 3 examples of the wearer's own gesture.
 
 ## 15. Privacy (this product is built on people's voices)
 
@@ -501,7 +707,13 @@ A Raspberry Pi 4/5 (64-bit Raspberry Pi OS, Python 3.11, BlueZ) sits in a room a
 - Exa looks up only the signed-in user, from what they gave. Every found item is reviewed;
   only `kept` ones are used.
 - We store **skills the person approved**, not audio, transcripts or recording URLs from calls.
-  Hub audio exists only while offline, and is deleted once transcribed.
+  Band audio exists only in the offline buffer, and is deleted once transcribed. Band transcript
+  segments are deleted after 24 h, or at once on mute. Raw motion never leaves the bridge.
+- **Bystanders.** The band hears people who never signed up. Their words are never published,
+  never quoted, and never credited by name unless they are a tacit user matched in the same
+  conversation (§13.5). Anyone saying "stop recording" mutes the band (§13.2). The blue light
+  stays visible, and the wearer is told to tell the people around them.
+- Mute is local and works offline. Unmuting needs a deliberate second step.
 - A skill is public only after the owner publishes it. Removing it hides it everywhere.
 - "Delete everything" really deletes every row.
 - Never log personal data (see §11).
@@ -509,7 +721,7 @@ A Raspberry Pi 4/5 (64-bit Raspberry Pi OS, Python 3.11, BlueZ) sits in a room a
 ## 16. Deployment on Fly.io
 
 The server (`tacit serve`: API, PWA, landing page, Vapi and Stripe webhooks) runs on Fly.io.
-The Pi hub (§13) is not deployed there; it uploads to the Fly app. The build writes these files
+Bridges (§13, on laptops or the Pi) are not deployed there; they upload to the Fly app. The build writes these files
 and **never runs `fly`** (§0).
 
 - **One machine, one volume.** SQLite can't be shared, so the app runs as exactly one machine
@@ -565,7 +777,7 @@ primary_region = "sjc"
   the Origin check (§4) use `PUBLIC_BASE_URL`, which is `https://<app>.fly.dev`.
 - **Secrets** live only in Fly: `fly secrets set SESSION_SECRET=... VAPI_SERVER_SECRET=...
   VAPI_API_KEY=... DEEPGRAM_API_KEY=... EXA_API_KEY=... TYPESAFE_API_KEY=...
-  STRIPE_SECRET_KEY=... STRIPE_WEBHOOK_SECRET=... HUB_TOKEN=... CALL_ALLOWLIST=...` (typed by a
+  STRIPE_SECRET_KEY=... STRIPE_WEBHOOK_SECRET=... OPENAI_API_KEY=... CALL_ALLOWLIST=...` (typed by a
   person, never by the build). `fly.toml` holds no secrets.
 - After the first deploy: run `tacit vapi-sync` locally with `PUBLIC_BASE_URL` set to the Fly
   URL, so Vapi's webhook points to `https://<app>.fly.dev/vapi/webhook`, and point the Vapi
