@@ -1,33 +1,43 @@
 // Tacit: landing page. No libraries. Three small jobs:
-//   1. the third line of the headline (easy to swap, see BEAT below)
+//   1. the lines under the title (easy to swap, see TAGLINES below)
 //   2. the network on the first screen: people in loose groups, a skill passing between them
 //      (the drawing code is copied from design/tacit-screens.html so both pages move the same way)
+//      and a person's portrait in round dots
 //   3. small clicks: the pop-up with the name-and-number form, and the follow button
 (function () {
   'use strict';
 
-  // ---------- 1. the third line of the headline ----------
-  // EDIT: to change the third line, change the word after BEAT to one of the names on the left.
-  // To try the other one without editing: add ?beat=share to the address, or press the B key on the page.
-  // "around" is the line the team took (the same as on the product screens). "Tacit is the handshake." was not taken and is not offered.
-  var BEATS = {
-    around: 'Tacit is how it gets around.',
-    share: 'Share yours. Follow theirs.'
-  };
-  var BEAT = 'around';
+  // ---------- 1. the lines under the title ----------
+  // EDIT: the page shows the set whose number is in TAGLINE (0 is the first set).
+  // To try another set without editing: press the T key on the page, or add ?line=2 to the address.
+  var TAGLINES = [
+    ['Agents have skills.', 'People have taste.', 'Tacit is how it gets around.'],          /* 0: the team's line */
+    ['You know things you never wrote down.', 'Pass them on with your name on them.'],      /* 1 */
+    ['The best tricks only come up in conversation.', 'Now your agent can learn them too.'], /* 2 */
+    ['Everybody has a way of doing things', 'that never makes it into a doc.', 'Talk it through and pass it on.'], /* 3 */
+    ['Some things you only learn from people.']                                             /* 4 */
+  ];
+  var TAGLINE = 0;
 
-  var beatNames = Object.keys(BEATS);
-  var asked = new URLSearchParams(location.search).get('beat');
-  var beatNow = beatNames.indexOf(asked) >= 0 ? asked : BEAT;
-  function showBeat() {
-    Array.prototype.forEach.call(document.querySelectorAll('[data-beat]'), function (node) { node.textContent = BEATS[beatNow]; });
+  var heroRefit = function () {};
+  var asked = parseInt(new URLSearchParams(location.search).get('line'), 10);
+  var lineNow = (asked >= 0 && asked < TAGLINES.length) ? asked : TAGLINE;
+  function showTagline() {
+    var lines = TAGLINES[lineNow];
+    var head = document.querySelector('.hero h1');
+    if (head) {
+      head.textContent = '';
+      lines.forEach(function (text) { var span = document.createElement('span'); span.textContent = text; head.appendChild(span); });
+    }
+    Array.prototype.forEach.call(document.querySelectorAll('[data-tagline]'), function (node) { node.textContent = lines.join(' '); });
+    heroRefit();
   }
-  showBeat();
+  showTagline();
   document.addEventListener('keydown', function (event) {
     var el = event.target;
     var typing = el && (el.tagName === 'INPUT' || el.isContentEditable);
     if (typing || event.metaKey || event.ctrlKey || event.altKey) return;
-    if (event.key === 'b' || event.key === 'B') { beatNow = beatNames[(beatNames.indexOf(beatNow) + 1) % beatNames.length]; showBeat(); }
+    if (event.key === 't' || event.key === 'T') { lineNow = (lineNow + 1) % TAGLINES.length; showTagline(); }
   });
 
   // ---------- 2. the network (based on vField in design/network-ideas.html and field in design/tacit-screens.html) ----------
@@ -66,15 +76,23 @@
       if(hot) hot.push(Math.round(x+xx*s),Math.round(y+yy*s),v); else put(Math.round(x+xx*s),Math.round(y+yy*s),v); } }
 
   /* ---- example data: people and who passed which skill to whom ---- */
-  /* EDIT: the invented names and the skill titles shown on the first screen */
+  /* EDIT: the invented names, and the skill each of them is known for (same order as the names).
+     A skill reads as "where it applies: what this person does", so it is clear without explanation and still sounds like one person's way. */
   var ALL=['Maya','You','Kai','Lena','Omar','Ines','Theo','Noor','Sam','Zoe','Ben','Ravi'];
   var WT=[1,.5,.3,.8,.55,.45,.3,.75,.25,.6,.35,.4];           /* how much each person has given */
-  var SK=['How to write a cold email','How to pitch in two sentences','How to interview a customer','How to give hard feedback'];   /* each must read as a skill with no explanation */
+  var SK=['Fundraising: a maybe is a no',            /* Maya */
+          'Writing: the ask goes first',             /* You  */
+          'Code review: design before style',        /* Kai  */
+          'Customer calls: ask about last time',     /* Lena */
+          'Design: one main action per screen',      /* Omar */
+          'Bugs: reproduce before you fix'];         /* Ines */
   /* link = [from, to, skill, whose skill it is] */
   function dataFor(K){
     var people=[], links, i;
     for(i=0;i<K;i++) people.push({n:ALL[i],w:WT[i],id:i});
     if(K<=3) links=[[0,1,0,0],[1,2,0,0],[2,0,1,2]];
+    else if(K<=6){ /* each person passes on their own skill; the last one is a skill passed along, so the chip adds "from Maya" */
+      links=[[0,1,0,0],[2,1,2,2],[1,4,1,1],[3,2,3,3],[4,0,4,4],[5,1,5,5],[1,3,0,0]].filter(function(l){ return l[0]<K&&l[1]<K; }); }
     else { links=[[0,1,0,0],[1,2,0,0],[3,1,2,3],[4,3,1,4],[3,0,3,3],[0,4,0,0],[1,4,2,3]].filter(function(l){ return l[0]<K&&l[1]<K; });
       var r=rng(hash('links'+K));
       for(i=5;i<K;i++){ var a=(r()*i)|0, b=(r()*K)|0; if(b===i) b=(i+1)%K; links.push([a,i,(r()*4)|0,a]); links.push([i,b,(r()*4)|0,i]); }
@@ -202,8 +220,57 @@
     return function(){ stopped=true; };
   }
 
+  /* ---- a person's portrait in round dots, like the dots of the title ----
+     EDIT: one character is one dot.  # hair   . face   o eye (it blinks)   - mouth   + clothes   space = nothing */
+  var FACES = {
+    maya: [
+      '     #######     ',
+      '   ###########   ',
+      '  #############  ',
+      ' ############### ',
+      ' ####.......#### ',
+      ' ###.........### ',
+      ' ##...........## ',
+      ' ##..o.....o..## ',
+      ' ##...........## ',
+      ' ##...........## ',
+      ' ###...---...### ',
+      ' ###.........### ',
+      ' ####.......#### ',
+      '  ####.....####  ',
+      '  ### ..... ###  ',
+      '   ## +...+ ##   ',
+      '  +++++...+++++  ',
+      ' +++++++++++++++ ',
+      '+++++++++++++++++'
+    ]
+  };
+  function face(cv, rows) {
+    var n = 0;
+    function draw() {
+      var S = fit(cv), W = S.W, H = S.H, ctx = S.ctx, cols = rows[0].length, cs = getComputedStyle(cv);
+      function tone(name, fallback) { return (cs.getPropertyValue(name) || '').trim() || fallback; }
+      var hair = tone('--ink', '#231E3D'), skin = tone('--pollen', '#FFE2A8'), cloth = tone('--glyph', '#FFFDF6'), lip = '#C0607A';
+      var s = Math.max(4, Math.floor(Math.min(W / (cols + 1), H / (rows.length + 0.5)))), rad = s * 0.44;
+      var x0 = Math.round((W - cols * s) / 2 + s / 2), y0 = Math.round(H - rows.length * s + s / 2);   /* the shoulders sit on the bottom edge */
+      var blink = !reduce && (n % 44 === 42 || n % 44 === 43);
+      ctx.clearRect(0, 0, W, H);
+      for (var r = 0; r < rows.length; r++) for (var c = 0; c < cols; c++) {
+        var ch = rows[r].charAt(c);
+        if (ch === ' ' || ch === '') continue;
+        ctx.fillStyle = ch === '#' ? hair : ch === '+' ? cloth : ch === '-' ? lip : (ch === 'o' && !blink) ? hair : skin;
+        ctx.beginPath(); ctx.arc(x0 + c * s, y0 + r * s, rad, 0, 6.2832); ctx.fill();
+      }
+    }
+    draw();
+    return { warm: 1, tick: function () { n++; var k = n % 44; if (k === 42 || k === 0) draw(); }, resize: draw };
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('canvas[data-face]'), function (cv) {
+    var rows = FACES[cv.getAttribute('data-face')];
+    if (rows) run(face(cv, rows), TICK, cv);
+  });
+
   /* ---- the first screen: on a wide window the people take the right half, on a narrow one they sit under the words ---- */
-  var heroRefit = function () {};
   (function () {
     var st = document.getElementById('top');
     if (!st) return;

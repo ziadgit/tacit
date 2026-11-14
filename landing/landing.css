@@ -118,6 +118,10 @@ h2{ font:400 clamp(2rem, 4.3vw, 3.5rem)/1.03 var(--serif); letter-spacing:-.01em
 .person-grid{ display:grid; grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr); gap:clamp(2rem,6vw,5.5rem); align-items:center; }
 .card{ position:relative; background:var(--paper); color:var(--ink); border-radius:1.3rem; box-shadow:0 .9rem 2.4rem rgba(20,16,40,.3); }
 .page{ width:100%; max-width:29rem; justify-self:center; padding:1.5rem 1.6rem 1.4rem; }
+/* a person's portrait in round dots, on a small piece of the lavender ground */
+.face{ position:absolute; right:1.4rem; top:1.4rem; width:8rem; height:8.8rem; border-radius:1.1rem;
+  background:radial-gradient(90% 70% at 50% 108%, #F4B6D2 0%, rgba(244,182,210,0) 70%), linear-gradient(160deg,#7A6FC3 0%,#9A8EDB 50%,#6A5FB3 100%); }
+.page .bio{ max-width:calc(100% - 9rem); min-height:5rem; }
 .nm{ display:inline-block; margin:0 0 .25rem; font:700 4rem/1 var(--hand); transform:rotate(-3deg); transform-origin:left bottom; }
 .bio{ font:400 1.42rem/1.2 var(--serif); }
 .skills{ margin-top:.8rem; padding-top:.5rem; border-top:1px dashed var(--line); }
@@ -190,5 +194,7 @@ h2{ font:400 clamp(2rem, 4.3vw, 3.5rem)/1.03 var(--serif); letter-spacing:-.01em
 }
 @media (max-width:560px){
   .page{ padding:1.2rem 1.15rem 1.2rem; }
+  .face{ right:1.1rem; top:1.2rem; width:7rem; height:7.7rem; }
+  .page .bio{ max-width:calc(100% - 7.8rem); }
   .nm{ font-size:3.4rem; }
 }
