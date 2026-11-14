@@ -291,9 +291,9 @@ class Scenarios:
                     continue
                 m = self._build(user.id, moment_kind, extracted, probs[kind], start, end, ids, segs)
                 m = self._dedup_or_add(m)
-                out.append(m)
                 for hook in self.hooks:
                     await hook(dev, m, extracted or {})
+                out.append(self.store.get_moment(m.id) or m)
         log.info("window: %d moments", len(out))
         return out
 

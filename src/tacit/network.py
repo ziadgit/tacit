@@ -198,7 +198,7 @@ def picked_up(store: Store, viewer: User) -> list[FeedItemOut]:
             g = store.get_user(p.giver_id)
             if g:
                 giver = who(g)
-                body["quote"] = m.body.get("quote")
+                body["quote"] = s.quote   # the giver's own words, from their own skill
         out.append(FeedItemOut(type="picked_up", id=f"picked_up:{m.id}", at=m.ended_at,
                                title=m.title or body.get("title"), body=body, giver=giver,
                                only_you=True))

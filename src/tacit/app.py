@@ -156,10 +156,10 @@ def signout() -> Response:
 
 
 def _routers() -> list[APIRouter]:
-    from . import bridge_api, context, interview, network, payments, portraits
+    from . import bridge_api, context, interview, moments, network, payments, portraits
 
     return [core, context.router, interview.router, network.router, payments.router,
-            portraits.router, bridge_api.router]
+            portraits.router, bridge_api.router, moments.router]
 
 
 def build_clients(app: FastAPI, settings: Settings) -> None:
@@ -186,9 +186,11 @@ def build_clients(app: FastAPI, settings: Settings) -> None:
 
         st.llm = make_llm(settings)
     if "scenarios" not in st.injected:
+        from .moments import MomentHooks
         from .scenarios import Scenarios
 
         st.scenarios = Scenarios(st.store, settings, st.jev, st.llm)
+        st.scenarios.hooks.append(MomentHooks(st.store, settings, st.jev))
     if "portraits" not in st.injected:
         from .portraits import make_portraits
 
