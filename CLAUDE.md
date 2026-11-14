@@ -10,6 +10,12 @@
 Reference build with the same stack and conventions: https://github.com/ziadgit/bling
 (Deepgram/Exa/Jev/Vapi patterns: `src/bling/{deepgram,conditions,decision,vapi}.py`).
 
+## Build docs
+
+`SPEC.md` is the source of truth for the build (its §0 safety rules come first), and
+`fix_plan.md` is the backlog. `PROMPT.md` runs the unattended build:
+`claude --dangerously-skip-permissions -p "$(cat PROMPT.md)"`. Pages follow `design-system/README.md`.
+
 ## Bootstrap
 
 ```sh
@@ -91,3 +97,7 @@ choose to share to the Tacit backend; everyone else learns about them from the b
 - **Vapi**: tool results must echo `toolCallId` exactly and be flat strings. Verify webhook
   secrets with `hmac.compare_digest`.
 - typer `Path` options trip ruff B008; `typer.Option`/`typer.Argument` are allow-listed.
+
+## Gotchas
+
+(Found during the build. Add one line each.)

@@ -26,4 +26,5 @@ logs/
 *.mp3
 
 .DS_Store
+.build_start
 .vercel/
