@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>tacit</title>
+<meta name="description" content="tacit: agents have skills. people have taste. tacit is how it gets around.">
+<meta name="theme-color" content="#6A5FB3">
+<link rel="manifest" href="/app/manifest.webmanifest">
+<link rel="icon" href="/app/icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/app/icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="/app/vendor/bundle.css">
+<link rel="stylesheet" href="/app/style.css">
+<script src="/app/vendor/bundle.js" defer></script>
+<script src="/app/vendor/face.js" defer></script>
+<!-- The service worker (/app/sw.js, scope /app/) is registered by app.js: the CSP allows no inline scripts. -->
+<script type="module" src="/app/app.js" data-sw="/app/sw.js" data-scope="/app/"></script>
+</head>
+<body>
+<div class="tc-ground shell" id="shell">
+  <header class="bar tc-above">
+    <a class="mark" href="#/feed" aria-label="tacit home"><span class="tc-word">tac<span class="bi">i</span>t</span></a>
+    <!-- the shell from the team's design (screens/feed): feed · network · profile · + connect -->
+    <nav id="nav-top" class="tabs-top" hidden aria-label="main">
+      <a href="#/feed" data-nav="feed">feed</a>
+      <a href="#/people" data-nav="people">network</a>
+      <a href="#/me" data-nav="me">profile</a>
+      <a class="connect" href="#/connect" data-nav="connect">+ connect</a>
+    </nav>
+    <span id="pill" class="listen-pill" hidden aria-live="polite"></span>
+  </header>
+  <p id="offline" class="banner tc-above" hidden role="status">you're offline. what you see may be out of date.</p>
+  <p id="toast" class="toast tc-above" hidden role="status" aria-live="polite"></p>
+  <main id="main" class="tc-above">
+    <section data-screen="start" hidden></section>
+    <section data-screen="context" hidden></section>
+    <section data-screen="call" hidden></section>
+    <section data-screen="skills" hidden></section>
+    <section data-screen="people" hidden></section>
+    <section data-screen="person" hidden></section>
+    <section data-screen="feed" hidden></section>
+    <section data-screen="moments" hidden></section>
+    <section data-screen="connect" hidden></section>
+    <section data-screen="transcript" hidden></section>
+    <section data-screen="me" hidden></section>
+  </main>
+  <nav id="nav" class="nav tc-above" hidden aria-label="main">
+    <a href="#/feed" data-nav="feed">feed</a>
+    <a href="#/people" data-nav="people">network</a>
+    <a class="connect" href="#/connect" data-nav="connect">+ connect</a>
+    <a href="#/me" data-nav="me">profile</a>
+  </nav>
+</div>
+<noscript><p class="banner">tacit needs JavaScript.</p></noscript>
+</body>
+</html>

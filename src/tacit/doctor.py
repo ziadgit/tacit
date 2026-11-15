@@ -82,6 +82,30 @@ async def check_jev(s: Settings, http: httpx.AsyncClient) -> tuple[bool, str]:
         return False, type(e).__name__
 
 
+async def check_anthropic(s: Settings, http: httpx.AsyncClient) -> tuple[bool, str]:
+    import anthropic
+
+    client = anthropic.AsyncAnthropic(api_key=require(s.anthropic_api_key, "ANTHROPIC_API_KEY"),
+                                      max_retries=0, timeout=15)
+    try:
+        await client.models.retrieve(s.claude_model)
+    except anthropic.APIStatusError as e:
+        return False, f"status {e.status_code}"
+    except anthropic.APIConnectionError as e:
+        return False, f"could not connect ({type(e).__name__})"
+    return True, f"works ({s.claude_model})"
+
+
+async def check_stripe(s: Settings, http: httpx.AsyncClient) -> tuple[bool, str]:
+    from .payments import is_test_key
+
+    key = require(s.stripe_secret_key, "STRIPE_SECRET_KEY")
+    if not is_test_key(key):
+        return False, "live key (only test keys are allowed; not called)"
+    r = await http.get("https://api.stripe.com/v1/balance", auth=(key, ""))
+    return (True, "works (test mode)") if r.is_success else (False, f"status {r.status_code}")
+
+
 def check_band_sim(s: Settings) -> tuple[bool, str]:
     band_no = require_band(s)
     use_kit()
@@ -97,10 +121,28 @@ def check_band_sim(s: Settings) -> tuple[bool, str]:
 CHECKS: dict[str, tuple[str, Callable[..., Awaitable[tuple[bool, str]]]]] = {
     "Deepgram": ("deepgram_api_key", check_deepgram),
     "OpenAI": ("openai_api_key", check_openai),
+    "Anthropic": ("anthropic_api_key", check_anthropic),
     "Exa": ("exa_api_key", check_exa),
     "Jev (TypeSafe)": ("typesafe_api_key", check_jev),
     "Vapi": ("vapi_api_key", check_vapi),
+    "Stripe": ("stripe_secret_key", check_stripe),
 }
+
+
+def settings_rows(s: Settings) -> list[Result]:
+    """Whether each server setting is there: yes/no only, never a value (the allowlist: a count)."""
+    rows = [Result(name, True if getattr(s, field) else None,
+                   "set: yes" if getattr(s, field) else "set: no")
+            for name, field in (("SESSION_SECRET", "session_secret"),
+                                ("VAPI_SERVER_SECRET", "vapi_server_secret"),
+                                ("PUBLIC_BASE_URL", "public_base_url"))]
+    rows.append(Result("MiniMax", True if s.minimax_api_key else None,
+                       "set (not checked: a check would make an image)" if s.minimax_api_key
+                       else "skipped: MINIMAX_API_KEY not set"))
+    n = len(s.call_allowlist)
+    rows.append(Result("CALL_ALLOWLIST", True if n else None,
+                       f"{n} number{'s' if n != 1 else ''}" if n else "empty: no outbound calls"))
+    return rows
 
 
 async def run(s: Settings) -> list[Result]:
@@ -123,4 +165,4 @@ async def run(s: Settings) -> list[Result]:
             return Result(name, ok, detail)
 
         results += await asyncio.gather(*(one(n, f, fn) for n, (f, fn) in CHECKS.items()))
-    return results
+    return results + settings_rows(s)

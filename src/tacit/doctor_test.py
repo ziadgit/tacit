@@ -12,9 +12,10 @@ def settings(**kw) -> Settings:
 async def test_missing_keys_are_skipped_not_failed(monkeypatch):
     monkeypatch.setattr(doctor, "check_band_sim", lambda s: (True, "sim"))
     results = await doctor.run(settings())
-    assert {r.name: r.ok for r in results if r.name != "Vexo kit"} == dict.fromkeys(
+    assert {r.name: r.ok for r in results if r.name in doctor.CHECKS} == dict.fromkeys(
         doctor.CHECKS, None
     )
+    assert not any(r.ok is False for r in results)
 
 
 @respx.mock
