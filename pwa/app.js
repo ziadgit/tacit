@@ -748,12 +748,83 @@ export function hourKey(iso) {
   return `${d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}, ${d.toLocaleTimeString([], { hour: '2-digit' })}`;
 }
 
-function momentDetail(m) {
+// The labelled fields of a moment, from what the band extracted (never invented on screen).
+export function momentFields(m) {
   const b = m.body || {};
-  const parts = [b.verdict, b.reason && `why: ${b.reason}`, b.what, b.when_text && `when: ${b.when_text}`,
-    b.why && `why: ${b.why}`, b.thing && b.kind ? `${b.kind}` : null, b.idea, b.question,
-    typeof b.minutes === 'number' && b.minutes > 0 ? `${b.minutes} min` : null];
-  return parts.filter((x) => typeof x === 'string' && x).join(' · ');
+  const rows = [];
+  const add = (label, value) => {
+    if (typeof value === 'string' && value.trim()) rows.push([label, value.trim()]);
+    else if (Array.isArray(value) && value.length) rows.push([label, value]);
+  };
+  add('what to do', b.verdict);
+  add('why', b.reason);
+  add('steps', (b.steps || []).filter(Boolean));
+  if (b.quote) rows.push(['in their words', `“${b.quote}”`, 'said']);
+  add('what', b.what);
+  add('who', b.who);
+  add('when', b.when_text);
+  add('why', b.why);
+  add('the thing', b.thing);
+  add('kind of thing', b.kind);
+  add('the question', b.question);
+  add('about', b.topic);
+  add('the idea', b.idea);
+  if (Array.isArray(b.matches) && b.matches.length) {
+    rows.push(['people who know', b.matches.map((x) => `${x.first_name}: ${x.title}`)]);
+  }
+  if (Array.isArray(b.found) && m.kind === 'kept') {
+    rows.push(['found in that minute', b.found.length ? b.found.map((k) => KIND_WORDS[k] || k) : ['nothing specific']]);
+  }
+  return rows;
+}
+
+export function sureWord(c) {
+  const p = Math.round((c || 0) * 100);
+  return `${p >= 85 ? 'sure' : p >= 70 ? 'fairly sure' : 'a guess'} (${p}%)`;
+}
+
+const SOURCE_WORDS = { audio: 'heard by the band', motion: 'from how your wrist moved', both: 'heard and from your wrist' };
+
+export function duration(startIso, endIso) {
+  const s = Math.max(0, Math.round((new Date(endIso) - new Date(startIso)) / 1000));
+  if (s < 60) return s ? `${s} s` : 'a moment';
+  const m = Math.round(s / 60);
+  return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60} min`;
+}
+
+function fieldList(rows) {
+  if (!rows.length) return null;
+  return h('dl', { class: 'fields' }, ...rows.flatMap(([label, value, kind]) => [
+    h('dt', { text: label }),
+    h('dd', { class: kind || null }, Array.isArray(value)
+      ? h(label === 'steps' ? 'ol' : 'ul', {}, ...value.map((v) => h('li', { text: v })))
+      : value),
+  ]));
+}
+
+async function momentMore(m, box) {
+  const d = await get(`/api/moments/${encodeURIComponent(m.id)}`);
+  const parts = [];
+  if (d.lines.length) {
+    parts.push(h('p', { class: 'sub-label', text: 'what was said' }),
+      h('ol', { class: 'transcript mini' }, ...d.lines.map((l) => h('li', { class: l.you ? 'you' : null },
+        h('span', { class: 'who' }, h('b', { text: speakerLabel(l) }), h('time', { text: clock(l.at) })),
+        h('p', { text: l.text })))));
+  } else if (d.lines_expected) {
+    parts.push(h('p', { class: 'note-ink', text: 'The words behind this moment are gone: transcripts are kept for 24 hours, and a mute removes the last 15 seconds.' }));
+  } else {
+    parts.push(h('p', { class: 'note-ink', text: m.source === 'motion' ? 'This came from how your wrist moved; no words are kept with it.' : 'No words are kept with this moment.' }));
+  }
+  if (d.skill) {
+    const jev = jevLine(d.skill.jev_specific);
+    parts.push(h('p', { class: 'sub-label', text: 'the draft skill it made' }),
+      h('p', {}, h('a', { href: '#/skills', class: 'link-ink', text: d.skill.title }), ` · ${d.skill.status}${jev ? ` · ${jev}` : ''}`));
+  }
+  for (const p of d.passes) {
+    parts.push(h('p', { class: 'sub-label', text: 'a pass' }),
+      h('p', { text: p.you_gave ? `You passed it to ${p.receiver}.` : `${p.giver} passed it to you.` }));
+  }
+  fill(box, ...parts);
 }
 
 function momentCard(m) {
@@ -764,20 +835,30 @@ function momentCard(m) {
       Object.assign(m, await patch(`/api/moments/${encodeURIComponent(m.id)}`, { status }));
       draw();
     });
+    const more = h('div', { class: 'more', hidden: true });
+    const toggle = h('button', { type: 'button', class: 'tc-textlink', text: 'what was said', 'aria-expanded': 'false' });
+    toggle.addEventListener('click', () => act(toggle, async () => {
+      const open = more.hidden;
+      if (open && !more.childNodes.length) await momentMore(m, more);
+      more.hidden = !open;
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.textContent = open ? 'hide' : 'what was said';
+    }));
     if (m.status !== 'kept') acts.append(h('button', { type: 'button', class: 'tc-btn quiet', text: 'keep', onclick: set('kept') }));
     if (m.status !== 'dismissed') acts.append(h('button', { type: 'button', class: 'tc-btn quiet', text: 'dismiss', onclick: set('dismissed') }));
     if (SHAREABLE.has(m.kind) && m.status !== 'shared') {
       acts.append(h('button', { type: 'button', class: 'tc-btn', text: 'share as a post', onclick: set('shared') }));
     }
-    if (m.skill_id) acts.append(h('a', { class: 'tc-textlink', href: '#/skills', text: 'see the draft skill' }));
-    const detail = momentDetail(m);
-    fill(card, 
+    acts.append(toggle);
+    const facts = [clock(m.started_at), duration(m.started_at, m.ended_at), SOURCE_WORDS[m.source] || m.source, sureWord(m.confidence)];
+    fill(card,
       h('div', { class: 'top' }, h('span', { class: 'tag-phrase', text: KIND_WORDS[m.kind] || m.kind }),
-        h('span', { class: 'when', text: `${clock(m.started_at)} · ${Math.round((m.confidence || 0) * 100)}% sure` })),
+        m.status === 'kept' ? h('span', { class: 'when', text: 'kept' }) : null),
       m.title && m.title !== KIND_WORDS[m.kind] ? h('h3', { class: 'card-title', text: m.title }) : null,
-      detail ? h('p', { text: detail }) : null,
+      h('p', { class: 'facts', text: facts.filter(Boolean).join(' · ') }),
+      fieldList(momentFields(m)),
       m.status === 'shared' ? h('p', { class: 'only-you', text: 'shared with your followers' }) : h('p', { class: 'only-you', text: 'only you see this' }),
-      acts);
+      acts, more);
   };
   draw();
   return card;

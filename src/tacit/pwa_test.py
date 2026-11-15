@@ -183,7 +183,8 @@ def test_band_screens_and_listening_pill():
         assert words in app, words
     # moments: keep / dismiss / share only for recommendation, lesson, idea
     assert "new Set(['recommendation', 'lesson', 'idea'])" in app
-    assert "'#/skills', text: 'see the draft skill'" in app
+    assert "'the draft skill it made'" in app and "text: 'what was said'" in app
+    assert "transcripts are kept for 24 hours" in app
     # the PWA's own CSS never draws the listening blue itself
     css = (PWA / "style.css").read_text().upper()
     assert "#1F5EFF" not in css and "--T-LISTEN" not in css

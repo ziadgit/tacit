@@ -182,3 +182,35 @@ def test_transcript_is_private_live_and_deletable(tmp_path):
     assert maya.delete("/api/transcript").status_code == 204
     assert maya.get("/api/transcript").json()["segments"] == []
     assert ana.get("/api/transcript").json()["segments"]          # Ana's untouched
+
+
+def test_moment_detail(tmp_path):
+    from tacit.domain import Segment, Skill
+
+    store, s, maya, ana, maya_id, ana_id = two_bands(tmp_path)
+    dev = store.device_for_user(maya_id)
+    t = now()
+    segs = [store.add_segment(Segment(
+        device_id=dev.id, user_id=maya_id, started_at=t - timedelta(seconds=a),
+        ended_at=t - timedelta(seconds=a - 3), speaker=spk, text=txt, level=lvl))
+        for a, spk, lvl, txt in [(30, 0, 15, "Lead with the number."), (20, 1, 33, "Why?")]]
+    sk = store.add_skill(Skill(owner_id=maya_id, title="Lead with the number", verdict="v",
+                               reason="r", source="conversation", jev_specific=0.8))
+    m = store.add_moment(Moment(user_id=maya_id, kind="advice_given", started_at=segs[0].started_at,
+                                ended_at=segs[1].ended_at, title="Lead with the number",
+                                body={"verdict": "v", "reason": "r"}, confidence=0.9,
+                                segment_ids=[x.id for x in segs], skill_id=sk.id))
+    from tacit.domain import Pass
+    store.add_pass(Pass(giver_id=maya_id, receiver_id=ana_id, skill_id=sk.id))
+    d = maya.get(f"/api/moments/{m.id}").json()
+    assert [(x["text"], x["you"]) for x in d["lines"]] == [("Lead with the number.", True),
+                                                          ("Why?", False)]
+    assert d["skill"]["title"] == "Lead with the number" and d["skill"]["jev_specific"] == 0.8
+    assert d["passes"] == [{"giver": "Maya", "receiver": "Ana", "you_gave": True,
+                            "at": d["passes"][0]["at"]}]
+    assert d["seconds"] == 13 and d["lines_kept"] is True
+    assert ana.get(f"/api/moments/{m.id}").status_code == 404      # only the wearer
+    # after 24 h the words are gone, the moment stays
+    store.delete_segments_for_user(maya_id)
+    d = maya.get(f"/api/moments/{m.id}").json()
+    assert d["lines"] == [] and d["lines_expected"] is True and d["moment"]["title"]

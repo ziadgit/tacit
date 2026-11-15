@@ -237,3 +237,17 @@ a.tc-btn { text-decoration: none; }
 .transcript-bar .two-step { color: var(--t-glyph); }
 .note-on-ground { margin: 0; color: var(--t-cap); font-size: 17px; }
 .on-ground-link { color: var(--t-glyph); }
+
+/* a moment in detail */
+.moment .facts { margin: 6px 0 0 !important; font: 500 14px/1.4 var(--t-mono); color: var(--t-acc); }
+.fields { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 12px 0 0; }
+.fields dt { font: italic 400 17px/1.3 var(--t-serif); color: var(--t-acc); }
+.fields dd { margin: 0; font-size: 16px; line-height: 1.4; overflow-wrap: anywhere; }
+.fields dd.said { font: 600 22px/1.15 var(--t-hand); color: var(--t-acc); }
+.fields ol, .fields ul { margin: 0; padding-left: 20px; }
+.moment .more { margin-top: 12px; display: grid; gap: 8px; }
+.moment .sub-label { margin: 6px 0 0; font: italic 400 18px/1.2 var(--t-serif); color: var(--t-acc); }
+.transcript.mini li { background: rgba(35,30,61,.07); color: var(--t-ink); }
+.transcript.mini li.you { background: rgba(106,95,179,.16); }
+.link-ink { color: var(--t-ink); font-weight: 600; }
+@media (max-width: 420px) { .fields { grid-template-columns: 1fr; gap: 2px; } .fields dd { margin-bottom: 6px; } }

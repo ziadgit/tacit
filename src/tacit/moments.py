@@ -19,7 +19,18 @@ from pydantic import BaseModel
 from . import judge
 from .auth import current_user, get_store
 from .config import Settings
-from .domain import POSTABLE_KINDS, BridgeDevice, Moment, MomentOut, Pass, Skill, User, cut, now
+from .domain import (
+    POSTABLE_KINDS,
+    BridgeDevice,
+    Moment,
+    MomentOut,
+    Pass,
+    Skill,
+    User,
+    cut,
+    first_name,
+    now,
+)
 from .scenarios import RETENTION, jaccard, wearer_speaker
 from .store import Store
 
@@ -134,6 +145,38 @@ def list_moments(user: Annotated[User, Depends(current_user)],
     ms.sort(key=lambda m: (m.started_at.replace(minute=0, second=0, microsecond=0),
                            m.kind == "demonstration", m.started_at), reverse=True)
     return [moment_out(m) for m in ms]
+
+
+@router.get("/api/moments/{moment_id}")
+def moment_detail(moment_id: str, user: Annotated[User, Depends(current_user)],
+                  store: Annotated[Store, Depends(get_store)]) -> dict[str, Any]:
+    """One moment in full: what was said (while those lines are kept, 24 h), its draft skill,
+    and any pass it made. Only the wearer can open it."""
+    m = store.get_moment(moment_id)
+    if m is None or m.user_id != user.id:
+        raise HTTPException(404, "no such moment")
+    segs = [s for sid in m.segment_ids if (s := store.get("segments", sid)) is not None]
+    segs.sort(key=lambda s: s.started_at)
+    wearer = wearer_speaker(segs)
+    skill = store.get_skill(m.skill_id) if m.skill_id else None
+    passes = []
+    for p in store.passes_for(user.id):
+        if p.receiver_moment_id == m.id or (m.skill_id and p.skill_id == m.skill_id):
+            giver, receiver = store.get_user(p.giver_id), store.get_user(p.receiver_id)
+            passes.append({"giver": first_name(giver.name) if giver else None,
+                           "receiver": first_name(receiver.name) if receiver else None,
+                           "you_gave": p.giver_id == user.id, "at": p.created_at})
+    return {
+        "moment": moment_out(m),
+        "seconds": int((m.ended_at - m.started_at).total_seconds()),
+        "lines": [{"speaker": s.speaker, "you": wearer is not None and s.speaker == wearer,
+                   "at": s.started_at, "text": s.text} for s in segs],
+        "lines_kept": bool(segs),
+        "lines_expected": bool(m.segment_ids),
+        "skill": {"id": skill.id, "title": skill.title, "status": skill.status,
+                  "jev_specific": skill.jev_specific, "jev_own": skill.jev_own} if skill else None,
+        "passes": passes,
+    }
 
 
 @router.patch("/api/moments/{moment_id}")
