@@ -225,9 +225,13 @@ def feed_items(store: Store, viewer: User) -> list[FeedItemOut]:
             items.append(FeedItemOut(type="heard", id=f"heard:{m.id}", at=m.ended_at, kind=m.kind,
                                      title=m.title, body=body, only_you=True))
     # minutes the wearer kept (double-tap or "keep"), with their words while they're kept (24 h)
+    shown: set[str] = set()   # newest first: a kept minute whose words are all shown is left out
     for m in store.moments_for(viewer.id, since=heard_since, kind="kept"):
         if m.status == "dismissed" or not m.segment_ids:
             continue
+        if set(m.segment_ids) <= shown and not m.body.get("found"):
+            continue
+        shown |= set(m.segment_ids)
         segs = sorted((x for sid in m.segment_ids if (x := store.get("segments", sid))),
                       key=lambda x: x.started_at)
         if not segs and not m.body.get("found"):

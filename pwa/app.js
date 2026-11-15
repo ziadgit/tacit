@@ -1387,6 +1387,12 @@ async function boot() {
   online();
   const me = document.querySelector('script[data-sw]');
   if ('serviceWorker' in navigator && me) {
+    // a new release took over (its worker calls clients.claim): reload once to run it
+    const hadController = Boolean(navigator.serviceWorker.controller);
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (hadController && !reloaded) { reloaded = true; location.reload(); }
+    });
     navigator.serviceWorker.register(me.dataset.sw, { scope: me.dataset.scope }).catch(() => {});
   }
   try {

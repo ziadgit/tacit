@@ -201,3 +201,20 @@ def test_kept_minutes_with_words_are_in_your_feed(tmp_path):
         ("Remember this one.", True), ("Sure.", False)]
     assert items[0]["body"]["found"] == ["idea"]
     assert not [i for i in b.get("/api/feed").json() if i["type"] == "heard"]   # only Maya's
+
+
+def test_overlapping_kept_minutes_show_once(tmp_path):
+    from tacit.domain import BridgeDevice, Segment
+
+    store, a, b, maya, ana = pair(tmp_path)
+    dev = store.add_device(BridgeDevice(user_id=maya, band=16, token_sha256="x"))
+    t = now()
+    segs = [store.add_segment(Segment(device_id=dev.id, user_id=maya,
+                                      started_at=t - timedelta(seconds=40 - i), ended_at=t,
+                                      speaker=0, text=f"line {i}", level=15)) for i in range(3)]
+    ids = [x.id for x in segs]
+    for k in range(5):     # five taps over the same words
+        store.add_moment(Moment(user_id=maya, kind="kept", ended_at=t + timedelta(seconds=k),
+                                started_at=t - timedelta(minutes=1), segment_ids=ids[:2 + (k > 2)]))
+    kept = [i for i in a.get("/api/feed").json() if i["type"] == "heard" and i["kind"] == "kept"]
+    assert len(kept) == 1 and len(kept[0]["body"]["lines"]) == 3
