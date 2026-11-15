@@ -20,6 +20,10 @@
   var TAGLINE = 0;
 
   var heroRefit = function () {};
+  // EDIT: the first screen is folded: title, one sentence, the network. The tagline lines are not shown there (they stay at the bottom of the page).
+  // To see the lines on the first screen again: press the H key on the page, or add ?hero=lines to the address.
+  var heroBox = document.getElementById('top');
+  if (heroBox) heroBox.classList.toggle('fold', new URLSearchParams(location.search).get('hero') !== 'lines');
   var asked = parseInt(new URLSearchParams(location.search).get('line'), 10);
   var lineNow = (asked >= 0 && asked < TAGLINES.length) ? asked : TAGLINE;
   function showTagline() {
@@ -38,6 +42,7 @@
     var typing = el && (el.tagName === 'INPUT' || el.isContentEditable);
     if (typing || event.metaKey || event.ctrlKey || event.altKey) return;
     if (event.key === 't' || event.key === 'T') { lineNow = (lineNow + 1) % TAGLINES.length; showTagline(); }
+    if ((event.key === 'h' || event.key === 'H') && heroBox) { heroBox.classList.toggle('fold'); heroRefit(); }
   });
 
   // ---------- 2. the network (based on vField in design/network-ideas.html and field in design/tacit-screens.html) ----------
@@ -137,7 +142,7 @@
       function quiet(x,y){ var q=1; if(o.fadeX!=null) q=Math.min(q,(x-o.fadeX)/(s*10)); if(o.fadeY!=null) q=Math.min(q,(y-o.fadeY)/(s*6)); if(o.fadeB!=null) q=Math.min(q,(o.fadeB-y)/(s*5)); return Math.max(0,Math.min(1,q)); }
       var gx=o.gx||(o.still?[0.27,0.5,0.74]:[0.25,0.52,0.78]), gy=o.gy||(o.still?[0.32,0.72,0.3]:[0.43,0.64,0.4]);
       var GC=[{x:W*gx[0],y:H*gy[0]},{x:W*gx[1],y:H*gy[1]},{x:W*gx[2],y:H*gy[2]}];
-      var sp=Math.min(W*0.13,H*0.2)*(o.spread||1), r=rng(hash('field'+K)), seen=[0,0,0];
+      var sp=Math.min(W*0.13,H*0.2)*(o.spread||1), r=rng(hash('field'+(o.seed||K))), seen=[0,0,0];
       var mx=o.still?s*4:(o.side||70), top=o.still?s*4:part(o.top,H,96), bot=o.still?s*4:part(o.bot,H,118);
       var x0=o.still?mx:part(o.left,W,mx), x1=o.still?W-mx:part(o.right,W,W-mx);
       for(i=0;i<K;i++){ var mk=MK[i], tx=0, ty=0, c=0; for(b=0;b<3;b++) if(mk>>b&1){ tx+=GC[b].x; ty+=GC[b].y; c++; } tx/=c; ty/=c;
@@ -161,7 +166,11 @@
       F=[]; var x, y;
       for(y=s/2;y<H;y+=s) for(x=s/2;x<W;x+=s){ var f=0;
         for(b=0;b<GL.length;b++){ var ggx=x-GL[b].x, ggy=y-GL[b].y; f+=0.4*Math.exp(-(ggx*ggx+ggy*ggy)/(2*sp*sp)); }
-        F.push({x:x,y:y,g:f,k:(Math.round((x-s/2)/s)+Math.round((y-s/2)/s))&1,m:quiet(x,y)}); }
+        var vis=quiet(x,y);
+        if(o.even){ /* one even ground with a soft rounded edge, instead of a patch per group (three patches read as an odd shape in a small box) */
+          var ux=Math.abs(x-W/2)/(W/2), uy=Math.abs(y-H/2)/(H/2), edge=Math.pow(ux*ux*ux*ux+uy*uy*uy*uy,0.25);
+          f=0.5; vis=Math.max(0,Math.min(1,(1-edge)/0.24)); }
+        F.push({x:x,y:y,g:f,k:(Math.round((x-s/2)/s)+Math.round((y-s/2)/s))&1,m:vis}); }
       if(!o.still) m.names.set(lab); }
     /* people drift a little at home; the one who is learning walks over to the one who explains, then walks back */
     function step(){ var s=o.cell, a=-1,b=-1,u=0,i; if(m.fl.cur){ a=m.fl.cur[0]; b=m.fl.cur[1]; u=m.fl.u; }
@@ -206,7 +215,13 @@
     }
     layout(); draw();
     return { warm:o.warm||60, tick:function(){ n++; if(!o.still){ if(n>(o.wait||30)) beat(m,o.dur||44,o.gap||14); step(); } for(var i=0;i<pulse.length;i++) pulse[i]=Math.max(0,pulse[i]-0.1); draw(); },
-      resize:function(){ layout(); draw(); }, set:function(k){ m.D=dataFor(k); m.fl.reset(); n=0; layout(); draw(); } };
+      resize:function(){ layout(); draw(); }, set:function(k){ m.D=dataFor(k); m.fl.reset(); n=0; layout(); draw(); },
+      /* the network grows: nobody already there jumps; each new person walks in from the nearer side, and their ring and name pulse once */
+      grow:function(k){ var was=P.map(function(q){ return {x:q.x,y:q.y}; }), s=o.cell, i; m.D=dataFor(k); m.fl.reset(); layout();
+        for(i=0;i<P.length;i++){ var q=P[i];
+          if(was[i]){ q.x=was[i].x; q.y=was[i].y; } else { q.x=q.hx<S.W/2?-q.rho*2:S.W+q.rho*2; q.y=q.hy; pulse[i]=1; m.names.got(i); }
+          q.sx=snap(q.x,s); q.sy=snap(q.y,s); m.names.move(i,q.sx,q.sy+q.rho+s*0.3); }
+        draw(); } };
   }
 
   /* run a drawing: m.tick() every ms, paused off screen, a settled frame when motion is reduced */
@@ -275,8 +290,8 @@
     var st = document.getElementById('top');
     if (!st) return;
     var cv = st.querySelector('canvas.tc-fx'), tell = st.querySelector('.tell'), wrap = st.querySelector('.wrap');
-    var head = st.querySelector('h1'), lead = st.querySelector('.lead'), chip = st.querySelector('.tc-chip');
-    if (!cv || !tell || !wrap || !head || !lead || !chip) return;
+    var room = st.querySelector('.gap'), chip = st.querySelector('.tc-chip');
+    if (!cv || !tell || !wrap || !room || !chip) return;
     /* far: 0 means a clean gradient everywhere; the dots appear only where the community is */
     var o = { K: 6, cell: 8, wait: 14, halo: true, dots: true, far: 0 };
     var wide = null;
@@ -293,8 +308,9 @@
         o.gx = [0.13, 0.5, 0.87].map(function (f) { return (x0 + (x1 - x0) * f) / W; });
         o.gy = [0.36, 0.7, 0.36];
       } else {
-        /* the network sits between the headline and the short line; the chip sits at the bottom of that space */
-        var a0 = (head.getBoundingClientRect().bottom - r.top) + root * 1.4, a1 = (lead.getBoundingClientRect().top - r.top) - root * 1;
+        /* the network sits in the space kept for it under the words; the chip sits at the bottom of that space */
+        var gr = room.getBoundingClientRect();   /* the space kept for the network, wherever it sits in the column */
+        var a0 = (gr.top - r.top) + root * 0.25, a1 = (gr.bottom - r.top) + root * 0.15;
         var chipH = root * 3.3, low = a1 - chipH - root * 2.6;
         o.K = 5; o.masks = [1, 2, 4, 1, 4]; o.nameH = root * 1.5; o.fadeX = null; o.fadeY = a0 - o.cell * 4; o.fadeB = a1 + o.cell * 2;
         o.left = 0.1; o.right = 0.9; o.top = a0 + root * 0.6; o.bot = H - low;
@@ -312,6 +328,35 @@
     heroRefit = me.resize;
     window.TacitLanding = window.TacitLanding || {}; window.TacitLanding.hero = me;   /* a handle for checking the drawing by hand: TacitLanding.hero.tick() moves it one step */
     run(me, TICK, st);
+  }());
+
+  /* ---- step 3 of the journey: the same living network as on the first screen, in a small box, and it grows ---- */
+  (function () {
+    var box = document.querySelector('[data-mini-net]');
+    var cv = box && box.querySelector('canvas.tc-fx');
+    if (!cv) return;
+    /* EDIT: it starts with three people (Maya, You, Kai); one more joins every JOIN ticks, up to MOST; then it starts again.
+       The people are the first names of ALL, in that order. No group words and no chip here. */
+    var FIRST = 3, JOIN = 46, HOLD = 110;
+    var o = { K: FIRST, seed: 'mini', masks: [1, 2, 4, 1, 4, 2], wait: 6, dur: 30, gap: 8, halo: true, dots: true, even: true, far: 0, left: 0.15, right: 0.85, gx: [0.22, 0.5, 0.78], gy: [0.28, 0.74, 0.28] };
+    var most = 6, now = FIRST, t = 0;
+    function size() {
+      var root = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      o.cell = Math.max(7, Math.round(root * 0.44)); o.nameH = root * 1.5; o.top = root * 2.4; o.bot = root * 3.6;
+      most = box.getBoundingClientRect().width < 340 ? 5 : 6;   /* a narrow box holds five people, a wide one six */
+    }
+    size();
+    if (reduce) { now = most; o.K = most; }   /* no motion wanted: everyone is there from the start */
+    var m = field(cv, box, o);
+    var me = { warm: m.warm,
+      tick: function () {
+        if (!reduce) { t++;
+          if (now < most && t >= JOIN) { t = 0; now++; m.grow(now); }
+          else if (now >= most && t >= HOLD) { t = 0; now = FIRST; m.set(now); } }
+        m.tick(); },
+      resize: function () { size(); if (now > most) { now = most; m.set(now); } else m.resize(); } };
+    window.TacitLanding = window.TacitLanding || {}; window.TacitLanding.mini = me;   /* a handle for checking by hand: TacitLanding.mini.tick() */
+    run(me, TICK, box);
   }());
 
   // ---------- the journey: each step lights up and opens as you scroll ----------
@@ -335,7 +380,7 @@
     function settle() {   /* no motion wanted: everything lit and open */
       list.style.setProperty('--p', '1');
       list.style.setProperty('--end', Math.max(0, list.offsetHeight - steps[steps.length - 1].offsetTop - (steps[0].firstElementChild.offsetHeight / 2 || 26)) + 'px');
-      steps.forEach(function (li) { li.style.removeProperty('--o'); li.classList.add('on'); });
+      steps.forEach(function (li) { li.style.removeProperty('--o'); li.classList.add('on'); var pic = li.querySelector('.stage'); if (pic) pic.classList.add('seen'); });
     }
     function update() {
       waiting = false;
@@ -350,6 +395,8 @@
         var below = (li.getBoundingClientRect().top - vh * LINE) / (vh * 0.3);   /* 0 at the line, 1 a third of a screen below it */
         li.style.setProperty('--o', Math.max(0.27, Math.min(1, 1 - below * 0.73)).toFixed(3));
         li.classList.toggle('on', below <= 0);
+        var pic = li.querySelector('.stage');   /* the picture of a step comes in when its own top is on screen */
+        if (pic) pic.classList.toggle('seen', pic.getBoundingClientRect().top < vh * 0.86);
       });
     }
     function ask() { if (!waiting) { waiting = true; requestAnimationFrame(update); } }
@@ -371,6 +418,14 @@
   }
   function closePop() { if (!pop) return; if (typeof pop.close === 'function') pop.close(); else pop.removeAttribute('open'); }
   Array.prototype.forEach.call(document.querySelectorAll('[data-open-join]'), function (button) { button.addEventListener('click', openPop); });
+  // The pinned start button hides while the last section's own button is on screen, so there are never two side by side.
+  var pin = document.querySelector('.pin'), lastBtn = document.querySelector('.end [data-open-join]');
+  if (pin && lastBtn) {
+    var pinCheck = function () { var r = lastBtn.getBoundingClientRect(); pin.classList.toggle('away', r.top < (window.innerHeight || 0) && r.bottom > 0); };
+    window.addEventListener('scroll', pinCheck, { passive: true });
+    window.addEventListener('resize', pinCheck);
+    pinCheck();
+  }
   if (pop) {
     Array.prototype.forEach.call(pop.querySelectorAll('[data-close]'), function (button) { button.addEventListener('click', closePop); });
     pop.addEventListener('click', function (event) { if (event.target === pop) closePop(); });   /* a click outside the sheet closes it */
@@ -388,10 +443,17 @@
       if (!name) { nameIn.focus(); return; }
       if (!phone) { phoneIn.focus(); return; }
       if (note) {
-        note.textContent = 'Thank you, ' + name + '. Calls are not open yet: Tacit is a prototype built today at VexoHacks. Nothing was saved.';
+        note.textContent = 'Thank you, ' + name + '.';
         note.hidden = false;
       }
     });
+  });
+
+  // A product logo is the icon of the product's own site. If it does not load (no network), it is taken away and the name stays.
+  Array.prototype.forEach.call(document.querySelectorAll('img[data-logo]'), function (img) {
+    function drop() { if (img.parentNode) img.parentNode.removeChild(img); }
+    img.addEventListener('error', drop);
+    if (img.complete && !img.naturalWidth) drop();
   });
 
   Array.prototype.forEach.call(document.querySelectorAll('[data-follow]'), function (button) {
