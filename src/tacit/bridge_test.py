@@ -542,3 +542,26 @@ async def test_no_sound_from_the_band_is_noticed_and_asked_again(tmp_path):
     await r.bridge.tick()                                  # not again within 10 s
     assert len(calls) == 1
     await r.close()
+
+
+def results(text, start, dur, speaker, speech_final=False):
+    words = [{"word": w, "speaker": speaker} for w in text.split()]
+    return {"type": "Results", "is_final": True, "speech_final": speech_final, "start": start,
+            "duration": dur, "channel": {"alternatives": [{"transcript": text, "words": words}]}}
+
+
+def test_each_final_piece_is_sent_without_waiting_for_a_pause():
+    got = []
+    ears = br.deepgram_ears(got.append, [], make_settings())
+    ears.stream_t0 = 1_000.0
+    ears.on_text, ears.finals, ears._parts = None, [], []    # what start() sets, minus the socket
+    # non-stop talk: Deepgram never says speech_final
+    ears._message(results("When I report results", 0.5, 2.0, 0))
+    ears._message({"type": "Results", "is_final": False, "channel": {"alternatives": [
+        {"transcript": "I open", "words": []}]}})              # a guess: not sent
+    ears._message(results("I open with the number", 2.5, 2.5, 0))
+    ears._message(results("Why", 5.2, 0.4, 1))
+    assert [(p.text, p.speaker) for p in got] == [("When I report results", 0),
+                                                  ("I open with the number", 0), ("Why", 1)]
+    assert (got[1].started, got[1].ended) == (1002.5, 1005.0)
+    assert br.final_piece(results("   ", 0, 1, 0), 1_000.0) is None

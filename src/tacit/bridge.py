@@ -141,34 +141,48 @@ def deepgram_ears(on_piece: Callable[[Piece], None], keyterms: list[str],
     import speech  # the kit's examples/python/speech.py
 
     class DiarizedDeepgram(speech.DeepgramSpeech):
+        """Every finished piece Deepgram sends (`is_final`) goes to tacit at once, with its own
+        speaker and time. (The kit waits for a pause, `speech_final`, before it hands over a
+        sentence; in a noisy room or in non-stop talk that pause may never come.)"""
+
         def __init__(self) -> None:
             super().__init__(model=settings.deepgram_stt_model, endpointing=300, diarize="true")
             # Repeated keyterm= parameters: urlencode() takes a list of pairs.
             self.query = [*self.query.items(), *(("keyterm", k) for k in keyterms)]
-            self._speakers: list[int] = []
-            self._began: float | None = None
+            self.stream_t0: float | None = None
+
+        def start(self, on_text=None):
+            self.stream_t0 = time.time()      # Deepgram's `start` is seconds into the stream
+            return super().start(on_text)
 
         def _message(self, message: dict) -> None:
-            if message.get("type") == "Results" and message.get("is_final"):
-                alt = (message.get("channel", {}).get("alternatives") or [{}])[0]
-                for w in alt.get("words") or []:
-                    if isinstance(w.get("speaker"), int):
-                        self._speakers.append(w["speaker"])
-                if self._began is None and alt.get("transcript"):
-                    dur = message.get("duration")
-                    self._began = time.time() - (dur if isinstance(dur, int | float) else 0)
             super()._message(message)
-
-        def _say(self, text, final) -> None:
-            super()._say(text, final)
-            text = (text or "").strip()
-            if final and text:
-                spk = statistics.mode(self._speakers) if self._speakers else None
-                ended = time.time()
-                on_piece(Piece(text, self._began or ended, ended, spk))
-                self._speakers, self._began = [], None
+            if message.get("type") == "Results" and message.get("is_final"):
+                piece = final_piece(message, self.stream_t0)
+                if piece is not None:
+                    on_piece(piece)
 
     return DiarizedDeepgram()
+
+
+def final_piece(message: dict, stream_t0: float | None) -> Piece | None:
+    """One `is_final` Deepgram result as a Piece: its text, majority speaker and wall time."""
+    alt = ((message.get("channel") or {}).get("alternatives") or [{}])[0]
+    text = str(alt.get("transcript") or "").strip()
+    if not text:
+        return None
+    speakers = [w["speaker"] for w in alt.get("words") or [] if isinstance(w.get("speaker"), int)]
+    start, dur = message.get("start"), message.get("duration")
+    now = time.time()
+    if stream_t0 is not None and isinstance(start, int | float) and isinstance(dur, int | float):
+        started, ended = stream_t0 + start, stream_t0 + start + dur
+        ended = min(ended, now)
+        started = min(started, ended)
+    else:
+        ended = now
+        started = now - (dur if isinstance(dur, int | float) else 0)
+    return Piece(text, started, ended, statistics.mode(speakers) if speakers else None)
+
 
 
 class SimEars:
