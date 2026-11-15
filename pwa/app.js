@@ -613,8 +613,9 @@ export function feedItem(item) {
   }
   if (item.type === 'skill') {
     const s = item.skill;
-    const who = nameOf(item.person);
-    return story(who, [{ name: who }, 'shared a new skill'], item.at,
+    const mine = state.me && item.person && item.person.id === state.me.id;
+    const who = mine ? 'You' : nameOf(item.person);
+    return story(who, [{ name: who }, mine ? `shared a skill${s.visibility === 'followers' ? ' · for followers' : ''}` : 'shared a new skill'], item.at,
       h('h2', { class: 'line', text: s.title }),
       s.locked ? h('p', { class: 'note' }, 'for followers who unlocked it · ',
         h('a', { href: `#/people/${encodeURIComponent(item.person.id)}`, class: 'link', text: 'see how' }))

@@ -218,3 +218,14 @@ def test_overlapping_kept_minutes_show_once(tmp_path):
                                 started_at=t - timedelta(minutes=1), segment_ids=ids[:2 + (k > 2)]))
     kept = [i for i in a.get("/api/feed").json() if i["type"] == "heard" and i["kind"] == "kept"]
     assert len(kept) == 1 and len(kept[0]["body"]["lines"]) == 3
+
+
+def test_your_own_published_skills_are_in_your_feed(tmp_path):
+    store, a, b, maya, ana = pair(tmp_path)
+    pub = skill(store, maya, title="Mine, public", status="published")
+    locked = skill(store, maya, title="Mine, followers", status="published", visibility="followers")
+    skill(store, maya, title="Mine, draft")
+    mine = {i["skill"]["id"]: i for i in a.get("/api/feed").json() if i["type"] == "skill"}
+    assert set(mine) == {pub.id, locked.id}
+    assert mine[locked.id]["skill"]["locked"] is False and mine[locked.id]["person"]["id"] == maya
+    assert not [i for i in b.get("/api/feed").json() if i["type"] == "skill"]   # Ana doesn't follow

@@ -197,6 +197,11 @@ def feed_items(store: Store, viewer: User) -> list[FeedItemOut]:
                                          person=who(expert), kind=m.kind, title=m.title,
                                          body=body))
 
+    # your own published skills, as your followers see them
+    for sk in store.published_skills(viewer.id):
+        items.append(FeedItemOut(type="skill", id=f"skill:{sk.id}", at=sk.created_at,
+                                 person=who(viewer), skill=SkillOut.of(sk, owner=True)))
+
     seen_passes: set[str] = set()
     pass_sources = [p for uid in [viewer.id, *followed] for p in store.passes_for(uid)]
     for p in pass_sources:
