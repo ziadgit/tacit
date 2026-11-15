@@ -21,6 +21,7 @@
     button.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); padding: 6px 12px; font-size: 13px; }
     button:disabled { opacity: .45; cursor: default; }
     input[type="password"], input[type="text"] { font: inherit; font-size: 15px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: #fff; flex: 1; min-width: 180px; }
+    input[type="number"] { font: inherit; font-size: 15px; width: 120px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: #fff; }
     .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
     .pill { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 13px; border: 1px solid var(--line); color: var(--soft); }
     .pill[data-on="true"] { border-color: var(--blue); color: #fff; background: var(--blue); }
@@ -77,6 +78,7 @@
         <p>“What did Ziad recommend me today?”</p>
         <p>“Vexo, go back”</p>
         <p>“Vexo, stop listening”</p>
+        <p>Shake hands → connected</p>
         <small>The screens are pictures of the designs, standing in for the app.</small>
       </div>
     </section>
@@ -92,13 +94,19 @@
       </section>
 
       <section class="card">
-        <h2>Band and microphone</h2>
+        <h2>Bands and microphone</h2>
         <div class="row">
           <button id="connect">Connect</button>
           <span class="pill" id="st-band" data-on="false">Band</span>
           <span class="pill" id="st-mic" data-on="false">Microphone off</span>
           <span class="pill" id="st-ears" data-on="false">Deepgram</span>
         </div>
+        <div class="row">
+          <input type="number" id="other-number" min="1" max="999" placeholder="other band" aria-label="The other band's number">
+          <button id="connect-other" disabled>Connect the other band</button>
+          <span class="pill" id="st-other" data-on="false">Other band</span>
+        </div>
+        <p class="note">For the handshake: connect your teammate’s band here too (only your own team’s band). Then shake hands. When both wrists move together, you two are connected and the network opens.</p>
         <div class="row">
           <input type="password" id="dg-key" placeholder="Deepgram key" autocomplete="off" aria-label="Deepgram key">
           <button class="ghost" id="forget" hidden>Forget key</button>

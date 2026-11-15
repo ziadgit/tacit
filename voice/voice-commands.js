@@ -8,6 +8,10 @@
 // The kit is loaded when the page opens, so the click on Connect goes straight to Bluetooth.
 const kit = import('../vexo-open-kit/js/src/index.js').catch(() => null);
 
+// The handshake: both wrists make the same motion at the same moment. The detector is the team's own
+// (handshake-detector.js); this page only feeds it the motion of two bands and acts when it says yes.
+const handshakeKit = import('../handshake/handshake-detector.js').catch(() => null);
+
 const $ = (selector) => document.querySelector(selector);
 const say = (text) => { $('#message').textContent = text; };
 
@@ -118,6 +122,8 @@ function understand(text) {
 const state = {
   bandNumber: null,       // the band of this laptop, from ?band=NN in the address
   band: null,
+  other: null,            // the second band, for the handshake
+  detector: null,
   ears: null,             // the Deepgram connection
   earsKey: '',            // lives in this variable only: never stored, never in the address
   micOn: false,
@@ -195,7 +201,7 @@ function beep() {
 
 // ---------- the log (this is what the test counts) ----------
 
-const WAYS = { wake: 'wake word', tap: 'double-tap', typed: 'typed', question: 'question, no wake word' };
+const WAYS = { wake: 'wake word', tap: 'double-tap', typed: 'typed', handshake: 'handshake', question: 'question, no wake word' };
 
 function record(entry) {
   entry.n = state.log.length + 1;
@@ -221,6 +227,7 @@ function showCounts() {
   $('#counts').textContent = [
     `wake word: ${count((e) => e.kind === 'done' && e.way === 'wake')}`,
     `double-tap: ${count((e) => e.kind === 'done' && e.way === 'tap')}`,
+    `handshakes: ${count((e) => e.kind === 'done' && e.way === 'handshake')}`,
     `typed: ${count((e) => e.kind === 'done' && e.way === 'typed')}`,
     `“Vexo” but no command: ${count((e) => e.kind === 'no-command')}`,
     `command but no “Vexo”: ${count((e) => e.kind === 'no-wake')}`,
@@ -513,6 +520,7 @@ async function connect() {
       state.ears.send(packet.opus);                             // one Opus packet = one binary message
       state.sentSeconds += 0.02;
     });
+    band.on('motion', (m) => state.detector?.feedA(Number.isFinite(m.time) ? m.time : Date.now(), m.ax, m.ay, m.az));
     band.on('reconnecting', () => { pill('#st-band', false); say('The link dropped. Trying to get it back…'); });
     band.on('reconnected', () => { pill('#st-band', true); say(`Back with ${band.name}.`); });
     band.on('disconnect', () => {
@@ -526,7 +534,7 @@ async function connect() {
       say('Disconnected.');
     });
     band.on('stream-taken', (event) => say(event.message));
-    await band.configure({ events: true });
+    await band.configure({ events: true, motion: 50 });        // motion is for the handshake
     pill('#st-band', true, band.name);
     showMic();
     say(`Connected to ${band.name}. Next: the Deepgram key, then “Turn microphone on”.`);
@@ -537,7 +545,83 @@ async function connect() {
   return undefined;
 }
 
+// ---------- the handshake (two bands in this one tab) ----------
+
+async function connectOther() {
+  const number = Number($('#other-number').value);
+  if (!Number.isInteger(number) || number < 1 || number > 999) {
+    return say("Type the other band's number: it is written on its bag. It must be your own teammate's band.");
+  }
+  if (number === state.bandNumber) return say('That is your own band. Type your teammate\u2019s number.');
+  if (!state.detector) return say('The handshake detector is not in this folder (handshake-detector.js).');
+  $('#connect-other').disabled = true;
+  say(`Connecting to band ${number}: double-tap it (it blinks blue), then pick it in the list.`);
+  try {
+    const loaded = await kit;
+    if (!loaded) throw new Error('The Vexo kit is not in this folder.');
+    const band = await loaded.Band.connect(number, { autoReconnect: true });
+    state.other = band;
+    // Both bands' clocks are set from this computer when they connect, so `time` is comparable.
+    band.on('motion', (m) => state.detector?.feedB(Number.isFinite(m.time) ? m.time : Date.now(), m.ax, m.ay, m.az));
+    band.on('disconnect', () => {
+      state.other = null;
+      pill('#st-other', false, 'Other band');
+      $('#connect-other').disabled = false;
+      say(`Band ${number} disconnected.`);
+    });
+    await band.configure({ motion: 50 });
+    pill('#st-other', true, band.name);
+    say(`Connected to ${band.name}. Shake hands: when both wrists move together, the two of you are connected.`);
+  } catch (error) {
+    $('#connect-other').disabled = false;
+    say(error.message);
+  }
+  return undefined;
+}
+
+function onHandshake(found) {
+  if (state.current !== 'network') state.history.push(state.current);
+  show('network');                                            // the person you just met is at the top of the network
+  beep();
+  const did = 'Connected: opened Network';
+  $('#last-heard').textContent = 'Handshake felt on both bands';
+  $('#last-did').textContent = did;
+  $('#last-how').textContent = `handshake · the two motions match ${found.match.toFixed(2)}`;
+  $('#last').dataset.fresh = 'true';
+  setTimeout(() => { $('#last').dataset.fresh = 'false'; }, 1200);
+  record({ kind: 'done', way: 'handshake', command: 'handshake', heard: `two bands shook together (match ${found.match.toFixed(2)})`, did });
+}
+
+setInterval(() => {
+  if (!state.detector) return;
+  const found = state.detector.check();
+  if (found.handshake) onHandshake(found);
+}, 40);
+
+// Pretend motion on both sides, to check the logic with no bands: voice.pretendHandshake(true) is a
+// handshake, voice.pretendHandshake(false) is one person shaking alone.
+function pretendHandshake(together = true) {
+  const start = Date.now();
+  const timer = setInterval(() => {
+    const now = Date.now();
+    const t = (now - start) / 1000;
+    const still = () => 1 + (Math.random() - 0.5) * 0.03;
+    const wave = (shift) => 1 + 0.6 * Math.sin(2 * Math.PI * 3 * t + shift) + (Math.random() - 0.5) * 0.06;
+    state.detector?.feedA(now, 0, 0, t < 1.6 ? wave(0) : still());
+    state.detector?.feedB(now, 0, 0, t < 1.6 && together ? wave(0.25) : still());
+    if (t > 4) clearInterval(timer);
+  }, 20);
+}
+
+handshakeKit.then((loaded) => {
+  if (!loaded) return;
+  state.detector = new loaded.HandshakeDetector();
+  $('#connect-other').disabled = false;
+});
+
 // ---------- wiring ----------
+
+$('#connect-other').addEventListener('click', connectOther);
 
 $('#connect').addEventListener('click', connect);
 $('#mic').addEventListener('click', () => (state.micOn ? micOff() : micOn()));
@@ -589,7 +673,7 @@ $('#clear').addEventListener('click', () => {
 setInterval(() => { if (state.micOn && (state.wakeHint || state.armed)) evaluate(); }, 1000);
 
 // For checking the logic from the console, and for reading the log.
-window.voice = { understand, parseCommand, tidy, typed, state, logAsText };
+window.voice = { pretendHandshake, understand, parseCommand, tidy, typed, state, logAsText };
 
 const asked = Number(new URLSearchParams(location.search).get('band'));
 state.bandNumber = Number.isInteger(asked) && asked >= 1 && asked <= 999 ? asked : null;
@@ -597,6 +681,8 @@ $('#connect').textContent = state.bandNumber ? `Connect band ${state.bandNumber}
 say(state.bandNumber
   ? `Your band is ${state.bandNumber}. Close any other tab that holds the band, then press Connect. Or try a command in the box below.`
   : 'No band number yet: add ?band=NN (your own TACIT_BAND) to the address. The typed commands below work without a band.');
+const other = Number(new URLSearchParams(location.search).get('other'));
+if (Number.isInteger(other) && other >= 1 && other <= 999) $('#other-number').value = String(other);
 show(null);
 showMic();
 showCounts();
