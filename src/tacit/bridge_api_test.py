@@ -237,3 +237,13 @@ def test_a_minute_is_kept_once(tmp_path):
     assert keep(t) == {"stored": 1}
     assert keep(t + timedelta(seconds=20)) == {"stored": 0}       # arm moves read as taps
     assert keep(t + timedelta(seconds=90)) == {"stored": 1}
+
+
+def test_listening_needs_sound(tmp_path):
+    store, app, pwa, bridge, uid, token = paired(tmp_path)
+    bridge.post("/api/bridge/state", json={"connected": True, "listening": True, "muted": False,
+                                           "sound": False})
+    b = pwa.get("/api/band").json()["band"]
+    assert b["listening"] is False and b["no_sound"] is True     # no blue pill without sound
+    bridge.post("/api/bridge/state", json={"connected": True, "listening": True, "sound": True})
+    assert pwa.get("/api/band").json()["band"]["listening"] is True

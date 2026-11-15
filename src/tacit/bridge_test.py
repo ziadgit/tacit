@@ -519,3 +519,26 @@ async def test_a_dropped_speech_connection_reconnects(tmp_path):
     await r.bridge.tick()
     assert len(r.ears) == 3
     await r.close()
+
+
+async def test_no_sound_from_the_band_is_noticed_and_asked_again(tmp_path):
+    r = await rig(tmp_path)
+    await r.advance(2000)
+    await r.bridge.tick()
+    assert r.server.named("state")[-1]["sound"] is True
+    r.bridge.last_audio = r.bridge.clock() - 60          # as if the band stopped sending sound
+    r.bridge.listening_since = r.bridge.clock() - 60     # ...a while after listening began
+    calls = []
+    real = r.band.configure
+
+    async def spy(**kw):
+        calls.append(kw)
+        return await real(**kw)
+
+    r.band.configure = spy
+    await r.bridge.tick()
+    assert calls and calls[-1].get("audio") is True
+    assert any("no sound from the band" in line for line in r.lines)
+    await r.bridge.tick()                                  # not again within 10 s
+    assert len(calls) == 1
+    await r.close()

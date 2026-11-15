@@ -56,6 +56,7 @@ MAX_KEYTERMS = 20
 HANDSHAKE_TAP_S = 2.0   # a double-tap this close to a handshake is part of it
 KEEP_ONCE_S = 60.0      # one "keep that" per minute
 SPEECH_RESTART_S = 10.0 # reconnect a dropped speech connection at most this often
+NO_SOUND_S = 10.0       # listening but no sound from the band this long: ask again
 GESTURE_NOT_HANDSHAKE_S = 3.0   # a "handshake" this soon after a mute gesture was that gesture
 
 
@@ -246,6 +247,9 @@ class Bridge:
         self.last_gesture = float("-inf")
         self.last_kept = float("-inf")
         self.last_speech_restart = float("-inf")
+        self.last_audio = float("-inf")
+        self.last_sound_ask = float("-inf")
+        self.listening_since = float("-inf")
         self.gesturing: list[motion.Session] = []
         self.speech_windows: deque[float] = deque(maxlen=2000)  # when final speech arrived
         self.tasks: set[asyncio.Task] = set()
@@ -283,6 +287,7 @@ class Bridge:
         self.band.on("battery", self.on_battery)
         self.band.on("reconnected", self.on_reconnected)
         self.band.on("disconnect", self.on_disconnect)
+        self.band.on("stream-taken", self.on_stream_taken)
         self.connected = True
         await self.load_config()
         await self.setup()
@@ -321,6 +326,7 @@ class Bridge:
         self.start_ears()
         await self.band.configure(audio=True, mic_level=MIC_LEVEL_S)
         self.listening = True
+        self.listening_since = self.clock()
 
     def start_ears(self) -> None:
         """Start the live speech engine; with no internet, sound goes to the buffer instead."""
@@ -453,6 +459,7 @@ class Bridge:
                                      "ended_at": iso(t), "confidence": 1.0, "_at": t})
 
     def on_audio(self, a: Any) -> None:
+        self.last_audio = self.clock()
         if not self.listening or self.muted:
             return
         if self.ears is not None and not self.offline:
@@ -482,6 +489,17 @@ class Bridge:
     def on_reconnected(self, e: Any) -> None:
         self.connected = True
         self._spawn(self.setup())
+
+    def on_stream_taken(self, e: Any) -> None:
+        """Another program took one of the band's streams (or the kit thinks so): take it back."""
+        self.echo("tacit bridge: the band stopped sending a stream; taking it back")
+        self._spawn(self._take_back())
+
+    async def _take_back(self) -> None:
+        try:
+            await self.band.take_back()
+        except Exception as e:  # noqa: BLE001
+            log.info("take_back: %s", type(e).__name__)
 
     def on_disconnect(self, e: Any) -> None:
         self.connected = False
@@ -524,7 +542,9 @@ class Bridge:
             await self.unmute("from the app")
 
     def state(self) -> dict[str, Any]:
+        hearing = self.listening and not self.muted and self.clock() - self.last_audio < NO_SOUND_S
         return {"connected": self.connected, "listening": self.listening and not self.muted,
+                "sound": hearing,
                 "muted": self.muted, "battery": self.battery, "buffer_mb": self.buffer_mb,
                 "last_sync": iso(self.last_sync) if self.last_sync is not None else None}
 
@@ -602,7 +622,25 @@ class Bridge:
         if self.listening and not self.muted:
             self.start_ears()
 
+    async def check_sound(self) -> None:
+        """Listening but no sound from the band for a while: ask the band for it again."""
+        if not self.listening or self.muted or not self.connected:
+            return
+        t = self.clock()
+        if t - max(self.last_audio, self.listening_since) < NO_SOUND_S:
+            return
+        if t - self.last_sound_ask < NO_SOUND_S:
+            return
+        self.last_sound_ask = t
+        log.info("no sound from the band: asking again")
+        self.echo("tacit bridge: no sound from the band for a while; asking for it again")
+        try:
+            await self.band.configure(audio=True, mic_level=MIC_LEVEL_S)
+        except Exception as e:  # noqa: BLE001
+            log.info("audio again: %s", type(e).__name__)
+
     async def tick(self) -> None:
+        await self.check_sound()
         await self.check_speech()
         await self.take_pieces()
         t = self.clock()

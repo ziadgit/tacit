@@ -1068,7 +1068,8 @@ function bandSection() {
       return;
     }
     const status = !b.online ? 'the bridge is not running' : !b.connected ? 'the bridge can\'t see the band'
-      : b.listening ? 'listening' : b.muted ? 'muted' : 'connected, not listening';
+      : b.listening ? 'listening' : b.no_sound ? 'on, but no sound from the band (the bridge is asking it again)'
+        : b.muted ? 'muted' : 'connected, not listening';
     fill(card, 
       h('p', { class: 'band-status' }, h('b', { text: `band ${b.band}: ` }), status,
         typeof b.battery === 'number' ? ` · battery ${Math.round(b.battery)}%` : ''),

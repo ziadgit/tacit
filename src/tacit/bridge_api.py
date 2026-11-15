@@ -109,7 +109,10 @@ def band_out(dev: BridgeDevice | None, settings: Settings) -> dict[str, Any] | N
         "online": bool(fresh),
         "connected": connected,
         # listening only while the bridge itself says so, recently, and it isn't muted
-        "listening": bool(connected and st.get("listening") and not reported_muted),
+        "listening": bool(connected and st.get("listening") and not reported_muted
+                          and st.get("sound") is not False),
+        "no_sound": bool(connected and st.get("listening") and not reported_muted
+                         and st.get("sound") is False),
         "battery": st.get("battery"),
         "buffer_mb": st.get("buffer_mb"),
         "last_seen": dev.last_seen.isoformat() if dev.last_seen else None,
@@ -188,6 +191,7 @@ class StateIn(BaseModel):
     connected: bool = False
     listening: bool = False
     muted: bool = False
+    sound: bool | None = None      # is sound arriving from the band (None: an older bridge)
     battery: float | None = None
     buffer_mb: float | None = None
     last_sync: datetime | None = None
