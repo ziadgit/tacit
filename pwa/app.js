@@ -670,6 +670,60 @@ screens.connect = async function connect(root) {
   fill(root, h('h1', { class: 'title', text: 'connect' }), inPerson, follow, yours);
 };
 
+// ---- your transcript: what your band heard, live, only for you (kept 24 h) -------------------
+
+export function speakerLabel(seg) {
+  if (seg.you) return 'you';
+  return seg.speaker === null || seg.speaker === undefined ? 'someone' : `speaker ${seg.speaker + 1}`;
+}
+
+screens.transcript = async function transcript(root) {
+  const list = h('ol', { class: 'transcript', 'aria-live': 'polite' });
+  const seen = new Set();
+  let last = null;
+  const empty = h('p', { class: 'note-on-ground', text: 'Nothing yet. Start your band\'s bridge; lines appear a few seconds after someone finishes a sentence.' });
+  const nearBottom = () => window.innerHeight + window.scrollY >= document.body.scrollHeight - 120;
+  const add = (seg) => {
+    if (seen.has(seg.id)) return;
+    seen.add(seg.id);
+    const li = h('li', { class: seg.you ? 'you' : null },
+      h('span', { class: 'who' }, h('b', { text: speakerLabel(seg) }), h('time', { datetime: seg.started_at, text: clock(seg.started_at) })),
+      h('p', { text: seg.text }));
+    // keep the lines in time order even when one arrives late
+    const after = [...list.children].find((x) => x.dataset.at > seg.started_at);
+    li.dataset.at = seg.started_at;
+    if (after) list.insertBefore(li, after); else list.append(li);
+    if (!last || seg.ended_at > last) last = seg.ended_at;
+  };
+  const load = async () => {
+    const stick = nearBottom();
+    const q = last ? `?since=${encodeURIComponent(new Date(new Date(last).getTime() - 15000).toISOString())}` : '';
+    const out = await get(`/api/transcript${q}`);
+    out.segments.forEach(add);
+    empty.hidden = list.children.length > 0;
+    status.textContent = state.band && state.band.listening ? 'listening now' : state.band && state.band.muted ? 'muted' : 'not listening';
+    if (stick && out.segments.length) window.scrollTo(0, document.body.scrollHeight);
+  };
+  const status = h('span', { class: 'live' });
+  fill(root,
+    title('your transcript'),
+    h('p', { class: 'lede' }, 'Everything your band heard, as text. ', h('b', { text: 'Only you see this.' }),
+      ' Lines are deleted after 24 hours, and a mute removes the last 15 seconds.'),
+    h('p', { class: 'transcript-bar' }, status,
+      twoStep('delete my transcript', 'Delete every line now?', (btn) => act(btn, async () => {
+        await del('/api/transcript');
+        fill(list);
+        seen.clear();
+        last = null;
+        empty.hidden = false;
+        toast('Your transcript is deleted.');
+      }), 'tc-textlink on-ground-link')),
+    empty, list);
+  await load();
+  window.scrollTo(0, document.body.scrollHeight);
+  every(2500, () => load().catch(() => {}));
+};
+
 // ---- the band: moments, "your band", the ListeningPill -------------------------------------
 
 export const KIND_WORDS = {
@@ -989,6 +1043,7 @@ screens.me = function me(root) {
     h('nav', { class: 'profile-links', 'aria-label': 'yours' },
       h('a', { class: 'tc-btn on-ground', href: '#/skills', text: `your skills (${m.counts.skills})` }),
       h('a', { class: 'tc-btn on-ground quiet', href: '#/moments', text: 'your moments' }),
+      h('a', { class: 'tc-btn on-ground quiet', href: '#/transcript', text: 'your transcript' }),
       h('a', { class: 'tc-btn on-ground quiet', href: '#/call', text: 'have a conversation' }),
       h('a', { class: 'tc-btn on-ground quiet', href: `#/people/${encodeURIComponent(m.id)}`, text: 'how others see you' })),
     phrase('what you agreed to'),
@@ -1034,7 +1089,7 @@ function go(hash) {
 }
 
 // Which item of the shell (feed · network · profile · + connect) each screen belongs to.
-const NAV_SECTION = { person: 'people', skills: 'me', moments: 'me', call: 'me', context: 'connect' };
+const NAV_SECTION = { person: 'people', skills: 'me', moments: 'me', call: 'me', transcript: 'me', context: 'connect' };
 
 async function render() {
   clearTimers();

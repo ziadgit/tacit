@@ -187,3 +187,12 @@ def test_band_screens_and_listening_pill():
     # the PWA's own CSS never draws the listening blue itself
     css = (PWA / "style.css").read_text().upper()
     assert "#1F5EFF" not in css and "--T-LISTEN" not in css
+
+
+def test_transcript_screen():
+    html = (PWA / "index.html").read_text()
+    assert 'data-screen="transcript"' in html
+    app = own_js()["app.js"]
+    assert "'#/transcript'" in app and "/api/transcript" in app
+    assert "Only you see this." in app and "deleted after 24 hours" in app
+    assert "every(2500" in app

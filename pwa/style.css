@@ -224,3 +224,16 @@ a.tc-btn { text-decoration: none; }
 
 /* `hidden` always wins over a class's display (a hidden .tc-btn.wide stays hidden) */
 [hidden] { display: none !important; }
+
+/* your transcript (private) */
+.transcript { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.transcript li { display: grid; gap: 2px; padding: 10px 14px; border-radius: 14px; background: rgba(35,25,90,.32); color: var(--t-glyph); }
+.transcript li.you { background: rgba(251,246,236,.94); color: var(--t-ink); }
+.transcript li p { margin: 0; font-size: 17px; line-height: 1.45; overflow-wrap: anywhere; }
+.transcript .who { display: flex; gap: 10px; align-items: baseline; font-size: 14px; opacity: .85; }
+.transcript .who b { font-weight: 600; }
+.transcript-bar { margin: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; color: var(--t-cap); }
+.transcript-bar .live { font: italic 400 20px/1.2 var(--t-serif); }
+.transcript-bar .two-step { color: var(--t-glyph); }
+.note-on-ground { margin: 0; color: var(--t-cap); font-size: 17px; }
+.on-ground-link { color: var(--t-glyph); }

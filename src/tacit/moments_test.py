@@ -147,3 +147,38 @@ def test_moments_api(tmp_path):
     ana.post(f"/api/follow/{maya_id}")
     posts = [i for i in ana.get("/api/feed").json() if i["type"] == "post"]
     assert posts and posts[0]["title"] == "backwards"
+
+
+def test_transcript_is_private_live_and_deletable(tmp_path):
+    from tacit.domain import Segment
+
+    store, s, maya, ana, maya_id, ana_id = two_bands(tmp_path)
+    dev_m, dev_a = store.device_for_user(maya_id), store.device_for_user(ana_id)
+    t = now()
+
+    def seg(dev, ago, spk, lvl, text):
+        st = t - timedelta(seconds=ago)
+        return store.add_segment(Segment(device_id=dev.id, user_id=dev.user_id, started_at=st,
+                                         ended_at=st + timedelta(seconds=3), speaker=spk,
+                                         text=text, level=lvl))
+
+    seg(dev_m, 25 * 3600, 0, 15, "too old to show")
+    seg(dev_m, 60, 0, 15, "Lead with the number.")
+    seg(dev_m, 40, 1, 32, "Why?")
+    seg(dev_a, 30, 0, 15, "Ana's own words")
+    out = maya.get("/api/transcript").json()
+    assert [x["text"] for x in out["segments"]] == ["Lead with the number.", "Why?"]
+    assert [x["you"] for x in out["segments"]] == [True, False]   # loudest speaker by 6 dB+
+    assert out["retention_hours"] == 24 and out["band"] == 16
+    # incremental: only lines ending after `since`
+    since = (t - timedelta(seconds=45)).isoformat()
+    assert [x["text"] for x in maya.get("/api/transcript", params={"since": since})
+            .json()["segments"]] == ["Why?"]
+    # never another person's lines; never without a session
+    assert [x["text"] for x in ana.get("/api/transcript").json()["segments"]] == \
+        ["Ana's own words"]
+    anon = TestClient(maya.app, base_url="https://localhost")
+    assert anon.get("/api/transcript").status_code == 401
+    assert maya.delete("/api/transcript").status_code == 204
+    assert maya.get("/api/transcript").json()["segments"] == []
+    assert ana.get("/api/transcript").json()["segments"]          # Ana's untouched

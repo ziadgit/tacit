@@ -10,17 +10,17 @@
 """
 
 import logging
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel
 
 from . import judge
 from .auth import current_user, get_store
 from .config import Settings
-from .domain import POSTABLE_KINDS, BridgeDevice, Moment, MomentOut, Pass, Skill, User, cut
-from .scenarios import jaccard
+from .domain import POSTABLE_KINDS, BridgeDevice, Moment, MomentOut, Pass, Skill, User, cut, now
+from .scenarios import RETENTION, jaccard, wearer_speaker
 from .store import Store
 
 log = logging.getLogger("tacit.moments")
@@ -146,3 +146,39 @@ def patch_moment(moment_id: str, body: MomentPatch, user: Annotated[User, Depend
         raise HTTPException(422, "only a recommendation, lesson or idea can be shared")
     log.info("moment status: %s", body.status)
     return moment_out(store.update_moment(m.id, status=body.status))
+
+
+# ---- the wearer's own transcript (private; the last 24 h, as segments are kept) ---------------
+
+TRANSCRIPT_MAX = 1000
+
+
+@router.get("/api/transcript")
+def transcript(user: Annotated[User, Depends(current_user)],
+               store: Annotated[Store, Depends(get_store)],
+               since: Annotated[datetime | None, Query()] = None) -> dict[str, Any]:
+    """What the wearer's band heard, line by line. Only the wearer ever sees this; nothing in
+    it is published, and every line is deleted after 24 h (or at once by a mute's rewind)."""
+    floor = now() - RETENTION
+    if since is not None:
+        since = since if since.tzinfo else since.replace(tzinfo=UTC)
+        floor = max(floor, since)
+    segs = store.segments_for_user(user.id, floor)[-TRANSCRIPT_MAX:]
+    window = store.segments_for_user(user.id, now() - timedelta(minutes=10))
+    wearer = wearer_speaker(window)
+    dev = store.device_for_user(user.id)
+    return {
+        "segments": [{"id": s.id, "started_at": s.started_at, "ended_at": s.ended_at,
+                      "speaker": s.speaker, "you": wearer is not None and s.speaker == wearer,
+                      "text": s.text} for s in segs],
+        "band": dev.band if dev else None,
+        "retention_hours": int(RETENTION.total_seconds() // 3600),
+    }
+
+
+@router.delete("/api/transcript", status_code=204)
+def delete_transcript(user: Annotated[User, Depends(current_user)],
+                      store: Annotated[Store, Depends(get_store)]) -> Response:
+    n = store.delete_segments_for_user(user.id)
+    log.info("transcript deleted: %d lines", n)
+    return Response(status_code=204)

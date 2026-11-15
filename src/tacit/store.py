@@ -373,6 +373,15 @@ class Store:
                             [device_id, _ts(since)])
         return ids
 
+    def segments_for_user(self, user_id: str, since: datetime) -> list[Segment]:
+        return self.select("segments", "user_id = ? AND ended_at >= ?", [user_id, _ts(since)],
+                           order="started_at")
+
+    def delete_segments_for_user(self, user_id: str) -> int:
+        with self.lock:
+            return self.db.execute("DELETE FROM segments WHERE user_id = ?",
+                                   [user_id]).rowcount
+
     def delete_segments_before(self, before: datetime) -> int:
         with self.lock:
             return self.db.execute("DELETE FROM segments WHERE ended_at < ?",
