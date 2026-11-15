@@ -224,26 +224,34 @@ def feed_items(store: Store, viewer: User) -> list[FeedItemOut]:
                 body["skill"] = {"id": skill.id, "status": skill.status}
             items.append(FeedItemOut(type="heard", id=f"heard:{m.id}", at=m.ended_at, kind=m.kind,
                                      title=m.title, body=body, only_you=True))
-    # minutes the wearer kept (double-tap or "keep"), with their words while they're kept (24 h)
-    shown: set[str] = set()   # newest first: a kept minute whose words are all shown is left out
-    for m in store.moments_for(viewer.id, since=heard_since, kind="kept"):
-        if m.status == "dismissed" or not m.segment_ids:
+    # minutes the wearer kept (double-tap or "keep"), with their words while they're kept (24 h).
+    # Kept minutes that overlap in time (a burst of taps) become one line with all their words.
+    groups: list[dict[str, Any]] = []
+    for m in store.moments_for(viewer.id, since=heard_since, kind="kept"):   # newest first
+        if m.status == "dismissed" or (not m.segment_ids and not m.body.get("found")):
             continue
-        if set(m.segment_ids) <= shown and not m.body.get("found"):
-            continue
-        shown |= set(m.segment_ids)
-        segs = sorted((x for sid in m.segment_ids if (x := store.get("segments", sid))),
+        g = groups[-1] if groups else None
+        if g is not None and m.ended_at >= g["start"]:
+            g["start"] = min(g["start"], m.started_at)
+            g["ids"] |= set(m.segment_ids)
+            g["found"] |= set(m.body.get("found") or [])
+        else:
+            groups.append({"id": m.id, "at": m.ended_at, "start": m.started_at,
+                           "ids": set(m.segment_ids), "found": set(m.body.get("found") or [])})
+    for g in groups:
+        segs = sorted((x for sid in g["ids"] if (x := store.get("segments", sid))),
                       key=lambda x: x.started_at)
-        if not segs and not m.body.get("found"):
+        if not segs and not g["found"]:
             continue
         wearer = wearer_speaker(segs)
         lines = [{"you": wearer is not None and x.speaker == wearer, "speaker": x.speaker,
                   "text": x.text} for x in segs[:KEPT_LINES]]
-        items.append(FeedItemOut(type="heard", id=f"heard:{m.id}", at=m.ended_at, kind="kept",
-                                 title=m.title, body={"lines": lines,
-                                                      "more": max(0, len(segs) - KEPT_LINES),
-                                                      "found": m.body.get("found") or []},
+        items.append(FeedItemOut(type="heard", id=f"heard:{g['id']}", at=g["at"], kind="kept",
+                                 title="", body={"lines": lines,
+                                                 "more": max(0, len(segs) - KEPT_LINES),
+                                                 "found": sorted(g["found"])},
                                  only_you=True))
+
     for m in store.moments_for(viewer.id, kind="handshake"):
         pid = m.body.get("person_id")
         other = user(pid) if pid and m.status != "dismissed" else None
