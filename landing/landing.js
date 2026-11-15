@@ -417,7 +417,12 @@
     var first = pop.querySelector('input'); if (first) first.focus();
   }
   function closePop() { if (!pop) return; if (typeof pop.close === 'function') pop.close(); else pop.removeAttribute('open'); }
-  Array.prototype.forEach.call(document.querySelectorAll('[data-open-join]'), function (button) { button.addEventListener('click', openPop); });
+  /* "start with a call" goes to the app's sign-up, which has the consent boxes and places the real call.
+     (The pop-up below is kept for the design but no longer opened: its form sent nothing.) */
+  var APP_START = '/app/#/start';
+  Array.prototype.forEach.call(document.querySelectorAll('[data-open-join]'), function (button) {
+    button.addEventListener('click', function () { window.location.href = APP_START; });
+  });
   // The pinned start button hides while the last section's own button is on screen, so there are never two side by side.
   var pin = document.querySelector('.pin'), lastBtn = document.querySelector('.end [data-open-join]');
   if (pin && lastBtn) {
