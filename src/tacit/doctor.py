@@ -82,6 +82,20 @@ async def check_jev(s: Settings, http: httpx.AsyncClient) -> tuple[bool, str]:
         return False, type(e).__name__
 
 
+async def check_anthropic(s: Settings, http: httpx.AsyncClient) -> tuple[bool, str]:
+    import anthropic
+
+    client = anthropic.AsyncAnthropic(api_key=require(s.anthropic_api_key, "ANTHROPIC_API_KEY"),
+                                      max_retries=0, timeout=15)
+    try:
+        await client.models.retrieve(s.claude_model)
+    except anthropic.APIStatusError as e:
+        return False, f"status {e.status_code}"
+    except anthropic.APIConnectionError as e:
+        return False, f"could not connect ({type(e).__name__})"
+    return True, f"works ({s.claude_model})"
+
+
 async def check_stripe(s: Settings, http: httpx.AsyncClient) -> tuple[bool, str]:
     from .payments import is_test_key
 
@@ -107,6 +121,7 @@ def check_band_sim(s: Settings) -> tuple[bool, str]:
 CHECKS: dict[str, tuple[str, Callable[..., Awaitable[tuple[bool, str]]]]] = {
     "Deepgram": ("deepgram_api_key", check_deepgram),
     "OpenAI": ("openai_api_key", check_openai),
+    "Anthropic": ("anthropic_api_key", check_anthropic),
     "Exa": ("exa_api_key", check_exa),
     "Jev (TypeSafe)": ("typesafe_api_key", check_jev),
     "Vapi": ("vapi_api_key", check_vapi),

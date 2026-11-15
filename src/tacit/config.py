@@ -23,6 +23,7 @@ class Settings(BaseSettings):
 
     deepgram_api_key: SecretStr | None = None
     openai_api_key: SecretStr | None = None
+    anthropic_api_key: SecretStr | None = None   # if set, Claude does band extraction
     exa_api_key: SecretStr | None = None
     typesafe_api_key: SecretStr | None = None
     vapi_api_key: SecretStr | None = None
@@ -36,6 +37,8 @@ class Settings(BaseSettings):
     tacit_server_url: str | None = None
 
     openai_model: str = "gpt-6-luna"
+    claude_model: str = "claude-opus-5-5"
+    claude_effort: str = "medium"
     scenario_threshold: float = 0.6
     windows_per_hour: int = 40
     mute_rewind_s: int = 15

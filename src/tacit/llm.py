@@ -73,5 +73,10 @@ class LLM:
         return data
 
 
-def make_llm(settings: Settings) -> LLM | None:
+def make_llm(settings: Settings) -> Any:
+    """Claude when ANTHROPIC_API_KEY is set, else OpenAI when OPENAI_API_KEY is set, else None."""
+    if settings.anthropic_api_key is not None:
+        from .claude_llm import ClaudeLLM
+
+        return ClaudeLLM(settings)
     return LLM(settings) if settings.openai_api_key is not None else None
