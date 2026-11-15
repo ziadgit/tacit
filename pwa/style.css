@@ -251,3 +251,33 @@ a.tc-btn { text-decoration: none; }
 .transcript.mini li.you { background: rgba(106,95,179,.16); }
 .link-ink { color: var(--t-ink); font-weight: 600; }
 @media (max-width: 420px) { .fields { grid-template-columns: 1fr; gap: 2px; } .fields dd { margin-bottom: 6px; } }
+
+/* a person's profile card (the team's design: Ana's and Ziad's pages) */
+.back { color: var(--t-cap); text-decoration: none; font-size: 16px; min-height: 44px; display: inline-flex; align-items: center; }
+.profile-card { display: grid; gap: 12px; padding: 18px 18px 20px; }
+.who-row { display: flex; align-items: center; gap: 16px; }
+.portrait.tile { width: 80px; height: 88px; border-radius: 14px; flex: none; justify-self: auto; }
+.avatar-ring { width: 80px; height: 80px; border-color: var(--t-acc) !important; color: var(--t-acc) !important; font-size: 40px !important; }
+.profile-name { margin: 0; font: 700 52px/0.95 var(--t-hand); color: var(--t-ink); transform: rotate(-2deg); transform-origin: left; }
+.handle { margin: 4px 0 0; font: 500 13px/1 var(--t-mono); color: var(--t-acc); }
+.profile-headline { margin: 0; color: #3d3760; }
+.stats { margin: 0; display: flex; flex-wrap: wrap; gap: 6px 22px; padding-bottom: 12px; border-bottom: 1px dashed rgba(35,30,61,.25); color: #575072; font-size: 15px; }
+.stat b { font: 400 34px/1 var(--t-serif); color: var(--t-ink); margin-right: 5px; }
+.profile-rows { display: grid; grid-template-columns: 112px 1fr; gap: 10px 14px; margin: 0; align-items: baseline; }
+.profile-rows dt { font: italic 400 19px/1.15 var(--t-serif); color: var(--t-acc); }
+.profile-rows dd { margin: 0; font-weight: 600; font-size: 16px; }
+.profile-rows dd.chips { display: flex; flex-wrap: wrap; gap: 6px; font-weight: 600; }
+.chip { display: inline-flex; align-items: center; min-height: 30px; padding: 0 12px; border-radius: 999px; background: #E4DEF5; color: var(--t-ink); font-size: 14px; }
+.chip.outline { background: transparent; border: 1.5px solid var(--t-ink); }
+.profile-skills { list-style: none; margin: 0; padding: 12px 0 0; border-top: 1px dashed rgba(35,30,61,.25); display: grid; gap: 2px; }
+.skill-line { width: 100%; min-height: 44px; display: flex; align-items: center; gap: 10px; padding: 0; border: 0; background: none; color: var(--t-ink); text-align: left; cursor: pointer; font: 600 17px/1.25 var(--t-sans); }
+.skill-line .plus { color: var(--t-acc); font-weight: 700; }
+.skill-line .skill-title { flex: 1; }
+.skill-line .today { padding: 3px 10px; border-radius: 999px; background: var(--t-acc); color: #fff; font: 600 13px/1.2 var(--t-sans); }
+.skill-line .from { color: #575072; font: 400 14px/1.2 var(--t-sans); }
+.skill-line:focus-visible { outline: 3px solid var(--t-acc); outline-offset: 2px; border-radius: 6px; }
+.skill-more { padding: 0 0 10px 24px; display: grid; gap: 4px; }
+.skill-more p { margin: 0; }
+.profile-acts { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 4px; }
+.profile-acts .tc-btn { flex: 1 1 140px; border-radius: 999px; min-height: 48px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+@media (max-width: 420px) { .profile-rows { grid-template-columns: 96px 1fr; } .profile-name { font-size: 44px; } }

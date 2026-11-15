@@ -45,6 +45,11 @@ class User(BaseModel):
     consent_call: bool
     portrait: list[str] | None = None
     portrait_source: Literal["words", "photo"] | None = None
+    portrait_colors: dict[str, str] | None = None   # {hair, skin, clothes} as #rrggbb
+    location: Annotated[str, StringConstraints(strip_whitespace=True, max_length=60)] | None = None
+    company: Annotated[str, StringConstraints(strip_whitespace=True, max_length=60)] | None = None
+    expertise: list[str] = []          # up to 5 short chips, chosen by the person
+    worth_knowing: list[str] = []      # up to 5 short chips, chosen by the person
     kinds_off: list[str] = []          # scenario kinds the wearer switched off (§13.3)
     share_creative: bool = False       # "share creative sessions" (§13.5), off by default
     created_at: datetime = Field(default_factory=now)
@@ -194,6 +199,11 @@ class MeOut(BaseModel):
     consent_call: bool
     portrait: list[str] | None
     portrait_source: str | None
+    portrait_colors: dict[str, str] | None = None
+    location: str | None = None
+    company: str | None = None
+    expertise: list[str] = []
+    worth_knowing: list[str] = []
     kinds_off: list[str]
     share_creative: bool
     context: list[ContextItemOut]
@@ -208,12 +218,22 @@ class PersonOut(BaseModel):
     skill_count: int
     follower_count: int
     portrait: list[str] | None = None
+    portrait_colors: dict[str, str] | None = None
     following: bool = False
     paid: bool = False
+    handle: str = ""
+    location: str | None = None
+    company: str | None = None
+    expertise: list[str] = []
+    worth_knowing: list[str] = []
+    post_count: int = 0
+    recommendation_count: int = 0
+    met_at: datetime | None = None       # when the viewer shook hands with them, if they did
 
 
 class PersonDetailOut(PersonOut):
     skills: list[SkillOut]
+    recommends: list[str] = []         # things they shared as worth it
 
 
 class MomentOut(BaseModel):

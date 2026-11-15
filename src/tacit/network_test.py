@@ -133,3 +133,49 @@ def test_feed_typed_items(tmp_path):
     # the giver sees the pass too, without following the receiver
     assert [i for i in a.get("/api/feed").json() if i["type"] == "pass"]
     assert pub.id in {i["skill"]["id"] for i in feed_b if i["type"] == "skill"}
+
+
+def test_profile_fields_and_counts(tmp_path):
+    store, a, b, maya, ana = pair(tmp_path)
+    r = a.patch("/api/me", json={"location": "Belgrade", "company": "Nebius Group",
+                                 "expertise": ["AI adoption", "Voice agents"],
+                                 "worth_knowing": ["Speaks five languages"]})
+    assert r.status_code == 200 and r.json()["expertise"] == ["AI adoption", "Voice agents"]
+    assert a.patch("/api/me", json={"expertise": ["x" * 31]}).status_code == 422
+    assert a.patch("/api/me", json={"expertise": list("abcdef")}).status_code == 422
+    skill(store, maya, status="published")
+    t = now()
+    store.add_moment(Moment(user_id=maya, kind="recommendation", started_at=t, ended_at=t,
+                            title="Relevance", status="shared"))
+    store.add_moment(Moment(user_id=maya, kind="idea", started_at=t, ended_at=t,
+                            title="An idea", status="shared"))
+    store.add_moment(Moment(user_id=ana, kind="handshake", started_at=t, ended_at=t,
+                            body={"person_id": maya, "with": "Maya"}))
+    p = b.get(f"/api/people/{maya}").json()
+    assert p["handle"] == "maya" and p["location"] == "Belgrade" and p["company"] == "Nebius Group"
+    assert p["expertise"] == ["AI adoption", "Voice agents"]
+    assert p["worth_knowing"] == ["Speaks five languages"]
+    assert (p["skill_count"], p["post_count"], p["recommendation_count"]) == (1, 2, 1)
+    assert p["recommends"] == ["Relevance"] and p["met_at"] is not None
+    assert a.get(f"/api/people/{maya}").json()["met_at"] is None   # nobody "meets" themselves
+    a.patch("/api/me", json={"location": ""})
+    assert b.get(f"/api/people/{maya}").json()["location"] is None
+
+
+def test_old_databases_get_the_new_columns(tmp_path):
+    import sqlite3
+
+    db = tmp_path / "old.db"
+    con = sqlite3.connect(db)
+    con.execute("CREATE TABLE users (id, name, phone, headline, links, consent_lookup, "
+                "consent_call, portrait, portrait_source, kinds_off, share_creative, created_at, "
+                "PRIMARY KEY (id))")
+    con.execute("INSERT INTO users VALUES ('u1', 'Old User', '+14155550100', NULL, '[]', 0, 0, "
+                "NULL, NULL, '[]', 0, '2026-11-14T00:00:00.000000+00:00')")
+    con.commit()
+    con.close()
+    s = Store(db)
+    u = s.get_user("u1")
+    assert u.name == "Old User" and u.expertise == [] and u.location is None
+    s.update_user("u1", company="Acme")
+    assert s.get_user("u1").company == "Acme"

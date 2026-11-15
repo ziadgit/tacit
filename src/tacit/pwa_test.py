@@ -163,7 +163,10 @@ def test_portrait_in_the_pwa():
     assert "PHOTO_MAX_PX = 1024" in app and "localStorage.setItem(LAST_ROUTE" in app
     # the photo never reaches storage
     assert app.count("localStorage.setItem") == 1
-    assert "personHeader.push" in app and "m.portrait ? portraitPatch" in app
+    # the portrait sits in the profile card, in the person's own three colours
+    assert ("portraitPatch(p.portrait, { small: true, colors: p.portrait_colors, tile: true })"
+            in app)
+    assert "'--ink', skin: '--pollen', clothes: '--glyph'" in app
 
 
 def test_band_screens_and_listening_pill():
@@ -197,3 +200,11 @@ def test_transcript_screen():
     assert "'#/transcript'" in app and "/api/transcript" in app
     assert "Only you see this." in app and "deleted after 24 hours" in app
     assert "every(2500" in app
+
+
+def test_profile_card_design():
+    app = own_js()["app.js"]
+    for words in ("'based in'", "'company'", "'met at'", "'expertise'", "'worth knowing'",
+                  "'recommends'", "'Connect in person'", "`Follow ${p.first_name}`",
+                  "'save your profile'", "@${p.handle"):
+        assert words in app, words

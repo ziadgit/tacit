@@ -361,3 +361,19 @@ def test_api_not_set_up(tmp_path):
     c = client(tmp_path)
     onboard(c)
     assert c.post("/api/portrait", json={"description": "a"}).status_code == 503
+
+
+def test_colours_kept_with_the_picture(tmp_path):
+    fake = FakeMiniMax(images=[figure_png()])
+    c = api_client(tmp_path, fake)
+    out = c.post("/api/portrait", json={"description": "short dark hair"}).json()
+    colors = out["colors"][0]
+    assert set(colors) <= {"hair", "skin", "clothes"} and colors.get("skin", "").startswith("#")
+    assert c.put("/api/portrait", json={"map": MAYA, "colors": {"hair": "red"}}).status_code == 422
+    r = c.put("/api/portrait", json={"map": MAYA, "colors": colors})
+    assert r.status_code == 200
+    me = c.get("/api/me").json()
+    assert me["portrait_colors"] == colors
+    assert c.get(f"/api/people/{me['id']}").json()["portrait_colors"] == colors
+    c.delete("/api/portrait")
+    assert c.get("/api/me").json()["portrait_colors"] is None

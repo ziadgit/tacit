@@ -27,7 +27,8 @@ M = TypeVar("M", bound=BaseModel)
 
 # table -> (model, primary key columns, JSON columns)
 TABLES: dict[str, tuple[type[BaseModel], tuple[str, ...], tuple[str, ...]]] = {
-    "users": (User, ("id",), ("links", "portrait", "kinds_off")),
+    "users": (User, ("id",), ("links", "portrait", "kinds_off", "expertise", "worth_knowing",
+                              "portrait_colors")),
     "context_items": (ContextItem, ("id",), ()),
     "skills": (Skill, ("id",), ()),
     "follows": (Follow, ("follower_id", "expert_id"), ()),
@@ -83,6 +84,11 @@ class Store:
                 self.db.execute(
                     f"CREATE TABLE IF NOT EXISTS {table} ({cols}, PRIMARY KEY ({', '.join(pk)}))"
                 )
+                # a column added to the model since the database was made (no data lost)
+                have = {r["name"] for r in self.db.execute(f"PRAGMA table_info({table})")}
+                for col in model.model_fields:
+                    if col not in have:
+                        self.db.execute(f"ALTER TABLE {table} ADD COLUMN {col}")
             self.db.execute("CREATE TABLE IF NOT EXISTS events (user_id, kind, at)")
             self.db.execute(
                 "CREATE TABLE IF NOT EXISTS stripe_events (id PRIMARY KEY, at)"
@@ -99,7 +105,7 @@ class Store:
         if row is None:
             return None
         model, _, json_cols = TABLES[table]
-        d = dict(row)
+        d = {k: v for k, v in dict(row).items() if v is not None}   # NULL → the model default
         for c in json_cols:
             if d.get(c) is not None:
                 d[c] = json.loads(d[c])

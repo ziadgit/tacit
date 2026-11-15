@@ -287,6 +287,42 @@ def to_dot_map(png_bytes: bytes) -> list[str]:
     return ["".join(row) for row in grid]
 
 
+HEX = re.compile(r"^#[0-9a-f]{6}$")
+COLOR_KEYS = ("hair", "skin", "clothes")
+COLOR_OF = {"#": "hair", ".": "skin", "o": "skin", "-": "skin", "+": "clothes"}
+
+
+def map_colors(png_bytes: bytes, dot_map: list[str]) -> dict[str, str]:
+    """The average colour of the hair, skin and clothes cells of a dot map, as #rrggbb.
+    Only these three colours are kept with the picture, never the image."""
+    img = Image.open(io.BytesIO(png_bytes)).convert("RGB")
+    w, h = img.size
+    side = min(w, h)
+    left, top = (w - side) // 2, (h - side) // 2
+    small = img.crop((left, top, left + side, top + side)).resize((COLS, ROWS),
+                                                                    Image.Resampling.BOX)
+    px = small.load()
+    sums: dict[str, list[int]] = {k: [0, 0, 0, 0] for k in COLOR_KEYS}
+    for r, row in enumerate(dot_map):
+        for c, ch in enumerate(row):
+            part = COLOR_OF.get(ch)
+            if part and ch in "#.+":
+                acc = sums[part]
+                for i in range(3):
+                    acc[i] += px[c, r][i]
+                acc[3] += 1
+    out = {}
+    for part, (rr, gg, bb, n) in sums.items():
+        if n:
+            out[part] = f"#{rr // n:02x}{gg // n:02x}{bb // n:02x}"
+    return out
+
+
+def valid_colors(colors: object) -> bool:
+    return isinstance(colors, dict) and set(colors) <= set(COLOR_KEYS) and all(
+        isinstance(v, str) and HEX.match(v) for v in colors.values())
+
+
 def valid_map(m: object) -> bool:
     return (
         isinstance(m, list)
@@ -311,6 +347,7 @@ class PortraitIn(BaseModel):
 class PortraitPut(BaseModel):
     map: list[str]
     source: Literal["words", "photo"] = "words"
+    colors: dict[str, str] | None = None
 
 
 def make_portraits(settings: Settings) -> MiniMaxClient | None:
@@ -322,7 +359,7 @@ async def make_portrait(body: PortraitIn, request: Request,
                         user: Annotated[User, Depends(current_user)],
                         store: Annotated[Store, Depends(get_store)],
                         settings: Annotated[Settings, Depends(get_settings)]
-                        ) -> dict[str, list[list[str]]]:
+                        ) -> dict[str, list]:
     client = getattr(request.app.state, "portraits", None)
     if client is None:
         raise HTTPException(503, _NOT_SET_UP)
@@ -347,17 +384,19 @@ async def make_portrait(body: PortraitIn, request: Request,
     finally:
         photo = None  # dropped once the request ends
         body.photo = None
-    candidates = []
+    candidates, colors = [], []
     for img in images[:4]:
         try:
-            candidates.append(to_dot_map(img))
+            dot_map = to_dot_map(img)
+            colors.append(map_colors(img, dot_map))
+            candidates.append(dot_map)
         except Exception:  # noqa: BLE001 - an unreadable image is just one candidate fewer
             continue
     images.clear()
     if not candidates:
         raise HTTPException(422, _TRY_DIFFERENT)
     log.info("portrait: %d candidates (%s)", len(candidates), body.mode)
-    return {"candidates": candidates}
+    return {"candidates": candidates, "colors": colors}
 
 
 @router.put("/api/portrait")
@@ -365,12 +404,16 @@ def keep_portrait(body: PortraitPut, user: Annotated[User, Depends(current_user)
                   store: Annotated[Store, Depends(get_store)]) -> dict[str, object]:
     if not valid_map(body.map):
         raise HTTPException(422, "a picture is 19 rows of 17 dots")
-    store.update_user(user.id, portrait=body.map, portrait_source=body.source)
-    return {"portrait": body.map, "portrait_source": body.source}
+    if body.colors is not None and not valid_colors(body.colors):
+        raise HTTPException(422, "colours are #rrggbb for hair, skin and clothes")
+    store.update_user(user.id, portrait=body.map, portrait_source=body.source,
+                      portrait_colors=body.colors or None)
+    return {"portrait": body.map, "portrait_source": body.source,
+            "portrait_colors": body.colors or None}
 
 
 @router.delete("/api/portrait", status_code=204)
 def delete_portrait(user: Annotated[User, Depends(current_user)],
                     store: Annotated[Store, Depends(get_store)]) -> Response:
-    store.update_user(user.id, portrait=None, portrait_source=None)
+    store.update_user(user.id, portrait=None, portrait_source=None, portrait_colors=None)
     return Response(status_code=204)

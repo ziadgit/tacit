@@ -1,6 +1,7 @@
 """Skills and the network API (SPEC §9) and the typed feed (§13.5)."""
 
 import logging
+import re
 from datetime import timedelta
 from typing import Annotated, Any, Literal
 
@@ -62,13 +63,34 @@ def skill_view(store: Store, viewer: User, s: Skill) -> SkillOut:
     return SkillOut.of(s, locked=locked, owner=viewer.id == s.owner_id)
 
 
+def handle(u: User) -> str:
+    return re.sub(r"[^a-z0-9]", "", first_name(u.name).lower()) or "someone"
+
+
+def shared_posts(store: Store, user_id: str) -> list:
+    return [m for m in store.moments_for(user_id)
+            if m.kind in POSTABLE_KINDS and m.status == "shared"]
+
+
+def met_at(store: Store, viewer: User, u: User):
+    """When the viewer shook hands with this person (their own handshake moments only)."""
+    times = [m.ended_at for m in store.moments_for(viewer.id, kind="handshake")
+             if m.body.get("person_id") == u.id]
+    return max(times) if times else None
+
+
 def person_out(store: Store, viewer: User, u: User, skill_count: int | None = None) -> PersonOut:
     f = store.get_follow(viewer.id, u.id)
+    posts = shared_posts(store, u.id)
     return PersonOut(
         id=u.id, first_name=first_name(u.name), headline=u.headline,
         skill_count=store.count_published(u.id) if skill_count is None else skill_count,
         follower_count=store.follower_count(u.id), portrait=u.portrait,
-        following=f is not None, paid=bool(f and f.paid),
+        portrait_colors=u.portrait_colors, following=f is not None, paid=bool(f and f.paid),
+        handle=handle(u), location=u.location, company=u.company, expertise=u.expertise,
+        worth_knowing=u.worth_knowing, post_count=len(posts),
+        recommendation_count=sum(m.kind == "recommendation" for m in posts),
+        met_at=met_at(store, viewer, u) if viewer.id != u.id else None,
     )
 
 
@@ -106,8 +128,11 @@ def person(person_id: str, user: CurrentUser, store: StoreDep) -> PersonDetailOu
         raise HTTPException(404, "no such person")
     skills = store.published_skills(u.id)
     base = person_out(store, user, u, len(skills))
+    recommends = [m.title or m.body.get("thing") or "" for m in shared_posts(store, u.id)
+                  if m.kind == "recommendation"]
     return PersonDetailOut(**base.model_dump(),
-                           skills=[skill_view(store, user, s) for s in skills])
+                           skills=[skill_view(store, user, s) for s in skills],
+                           recommends=[r for r in recommends if r][:8])
 
 
 @router.post("/api/follow/{person_id}")

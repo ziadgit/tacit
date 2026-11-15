@@ -54,7 +54,9 @@ def me_out(store: Store, user: User) -> MeOut:
         id=user.id, name=user.name, phone=user.phone, headline=user.headline,
         links=[str(u) for u in user.links], consent_lookup=user.consent_lookup,
         consent_call=user.consent_call, portrait=user.portrait,
-        portrait_source=user.portrait_source, kinds_off=user.kinds_off,
+        portrait_source=user.portrait_source, portrait_colors=user.portrait_colors,
+        location=user.location, company=user.company, expertise=user.expertise,
+        worth_knowing=user.worth_knowing, kinds_off=user.kinds_off,
         share_creative=user.share_creative,
         context=[ContextItemOut(**c.model_dump()) for c in ctx],
         calls=[CallOut(**c.model_dump()) for c in calls],
@@ -76,6 +78,9 @@ class OnboardingIn(BaseModel):
     consent_call: bool
 
 
+Chip = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=30)]
+
+
 class MePatch(BaseModel):
     headline: Annotated[str, StringConstraints(strip_whitespace=True, max_length=140)] | None = None
     links: Annotated[list[HttpUrl], Field(max_length=5)] | None = None
@@ -83,6 +88,10 @@ class MePatch(BaseModel):
     consent_call: bool | None = None
     kinds_off: list[str] | None = None
     share_creative: bool | None = None
+    location: Annotated[str, StringConstraints(strip_whitespace=True, max_length=60)] | None = None
+    company: Annotated[str, StringConstraints(strip_whitespace=True, max_length=60)] | None = None
+    expertise: Annotated[list[Chip], Field(max_length=5)] | None = None
+    worth_knowing: Annotated[list[Chip], Field(max_length=5)] | None = None
 
 
 core = APIRouter()
@@ -144,9 +153,13 @@ def get_me(user: CurrentUser, store: StoreDep) -> MeOut:
 @core.patch("/api/me")
 def patch_me(body: MePatch, user: CurrentUser, store: StoreDep) -> MeOut:
     fields = body.model_dump(exclude_unset=True)
-    for k in ("consent_lookup", "consent_call", "share_creative", "links"):
+    for k in ("consent_lookup", "consent_call", "share_creative", "links", "expertise",
+              "worth_knowing"):
         if k in fields and fields[k] is None:
             raise HTTPException(422, f"{k} can't be null")
+    for k in ("location", "company"):
+        if k in fields and not fields[k]:
+            fields[k] = None
     if "kinds_off" in fields:
         # stop_request can never be switched off: anyone asking to stop always mutes (§13.2)
         fields["kinds_off"] = [k for k in fields["kinds_off"] or []

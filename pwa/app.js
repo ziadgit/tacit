@@ -401,12 +401,73 @@ screens.people = async function people(root) {
   );
 };
 
-// Sections the person header can add (the dot portrait).
-export const personHeader = [];
 
 export function price(cents) {
   const d = (Number(cents) || 0) / 100;
   return `$${Number.isInteger(d) ? d : d.toFixed(2)}`;
+}
+
+// ---- a person's profile card (the team's design: Ana's and Ziad's profile pages) ----------
+
+function sameDayIso(iso) {
+  const d = new Date(iso);
+  return !Number.isNaN(d.getTime()) && sameDay(d, new Date());
+}
+
+const SKILL_FROM = { interview: 'from a call', conversation: 'heard' };
+
+function avatar(p) {
+  if (p.portrait) return portraitPatch(p.portrait, { small: true, colors: p.portrait_colors, tile: true });
+  return h('span', { class: 'face ring avatar-ring', 'aria-hidden': 'true', text: (p.first_name || '?').charAt(0).toUpperCase() });
+}
+
+function chips(list, outline) {
+  return h('dd', { class: 'chips' }, ...list.map((c) => h('span', { class: `chip${outline ? ' outline' : ''}`, text: c })));
+}
+
+function metLine(iso) {
+  const d = new Date(iso);
+  return `handshake · ${d.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${clock(iso).toLowerCase()}`;
+}
+
+function profileSkill(s, owner) {
+  const more = h('div', { class: 'skill-more', hidden: true },
+    ...(s.locked ? [h('p', { class: 'muted-ink', text: 'for followers who unlocked this person\'s skills' })]
+      : [s.verdict ? h('p', { class: 'verdict', text: s.verdict }) : null,
+        s.reason ? h('p', { class: 'reason' }, h('em', { text: 'because ' }), s.reason) : null,
+        s.quote ? h('p', { class: 'tc-said quote', text: `“${s.quote}”` }) : null]));
+  const tag = sameDayIso(s.created_at) ? h('span', { class: 'today', text: 'today' })
+    : h('span', { class: 'from', text: s.locked ? 'followers' : (SKILL_FROM[s.source] || '') });
+  const btn = h('button', { type: 'button', class: 'skill-line', 'aria-expanded': 'false' },
+    h('span', { class: 'plus', 'aria-hidden': 'true', text: '+' }), h('span', { class: 'skill-title', text: s.title }), tag);
+  btn.addEventListener('click', () => {
+    more.hidden = !more.hidden;
+    btn.setAttribute('aria-expanded', String(!more.hidden));
+  });
+  return h('li', {}, btn, more);
+}
+
+export function profileCard(p, { isMe = false } = {}) {
+  const n = (x, one, many) => h('span', { class: 'stat' }, h('b', { text: String(x) }), x === 1 ? one : many);
+  const rows = [];
+  if (p.location) rows.push(h('dt', { text: 'based in' }), h('dd', { text: p.location }));
+  if (p.company) rows.push(h('dt', { text: 'company' }), h('dd', { text: p.company }));
+  if (p.met_at) rows.push(h('dt', { text: 'met at' }), h('dd', { text: metLine(p.met_at) }));
+  if (p.expertise && p.expertise.length) rows.push(h('dt', { text: 'expertise' }), chips(p.expertise, false));
+  if (p.worth_knowing && p.worth_knowing.length) rows.push(h('dt', { text: 'worth knowing' }), chips(p.worth_knowing, true));
+  const skills = p.skills || [];
+  return h('article', { class: 'tc-card profile-card' },
+    h('div', { class: 'who-row' }, avatar(p),
+      h('div', {}, h('p', { class: 'profile-name', text: p.first_name }), h('p', { class: 'handle', text: `@${p.handle || ''}` }))),
+    p.headline ? h('p', { class: 'profile-headline', text: p.headline }) : null,
+    h('p', { class: 'stats' }, n(p.skill_count, 'skill', 'skills'), n(p.post_count || 0, 'post', 'posts'),
+      n(p.recommendation_count || 0, 'recommendation', 'recommendations')),
+    rows.length ? h('dl', { class: 'profile-rows' }, ...rows)
+      : (isMe ? h('p', { class: 'muted-ink', text: 'Add where you\'re based, your company and what you know, below.' }) : null),
+    skills.length ? h('ul', { class: 'profile-skills' }, ...skills.map((s) => profileSkill(s, isMe)))
+      : h('p', { class: 'muted-ink', text: isMe ? 'No published skills yet: publish one in your skills.' : 'No published skills yet.' }),
+    p.recommends && p.recommends.length ? h('dl', { class: 'profile-rows' },
+      h('dt', { text: 'recommends' }), chips(p.recommends, true)) : null);
 }
 
 screens.person = async function person(root, id, params) {
@@ -415,37 +476,29 @@ screens.person = async function person(root, id, params) {
   const p = await get(`/api/people/${encodeURIComponent(id)}`);
   const isMe = state.me && p.id === state.me.id;
   const locked = p.skills.filter((s) => s.locked).length;
-  const acts = h('div', { class: 'row' });
+  const acts = h('div', { class: 'profile-acts' });
   if (!isMe) {
     acts.append(p.following
-      ? h('button', { type: 'button', class: 'tc-btn on-ground quiet', text: 'unfollow', onclick: (ev) => act(ev.currentTarget, async () => {
+      ? h('button', { type: 'button', class: 'tc-btn quiet', text: `unfollow ${p.first_name}`, onclick: (ev) => act(ev.currentTarget, async () => {
         await del(`/api/follow/${encodeURIComponent(p.id)}`);
         render();
       }) })
-      : h('button', { type: 'button', class: 'tc-btn on-ground', text: 'follow', onclick: (ev) => act(ev.currentTarget, async () => {
+      : h('button', { type: 'button', class: 'tc-btn', text: `Follow ${p.first_name}`, onclick: (ev) => act(ev.currentTarget, async () => {
         await post(`/api/follow/${encodeURIComponent(p.id)}`);
         render();
-      }) }));
+      }) }),
+    h('a', { class: 'tc-btn quiet', href: '#/connect', text: 'Connect in person' }));
     if (locked && state.config.payments_enabled && !p.paid) {
-      acts.append(h('button', { type: 'button', class: 'tc-btn on-ground quiet', text: `unlock followers-only skills for ${price(state.config.follow_price_cents)}`,
+      acts.append(h('button', { type: 'button', class: 'tc-btn quiet', text: `unlock followers-only skills for ${price(state.config.follow_price_cents)}`,
         onclick: (ev) => act(ev.currentTarget, async () => {
           const { url } = await post(`/api/follow/${encodeURIComponent(p.id)}/checkout`);
           if (typeof url === 'string' && url.startsWith('https://')) location.assign(url);
         }) }));
     }
   }
-  fill(root, 
-    h('header', { class: 'person-head' },
-      ...personHeader.map((part) => part(p)),
-      personRing(p, { size: 'lg' }),
-      p.headline ? h('p', { class: 'lede', text: p.headline }) : null,
-      h('p', { class: 'counts', text: `${p.skill_count} skill${p.skill_count === 1 ? '' : 's'} · ${p.follower_count} follower${p.follower_count === 1 ? '' : 's'}` }),
-      acts),
-    phrase(`what ${(p.first_name || 'they').toLowerCase()} knows`),
-    h('div', { class: 'stack' }, ...(p.skills.length
-      ? p.skills.map((s) => h('article', { class: `tc-card skill${s.locked ? ' locked' : ''}` }, ...skillBody(s, p.first_name)))
-      : [h('p', { class: 'muted', text: 'No published skills yet.' })])),
-  );
+  const card = profileCard(p, { isMe });
+  if (!isMe) card.append(acts);
+  fill(root, h('a', { class: 'back', href: '#/people', text: '← network' }), card);
 };
 
 // ---- the feed: lines, not cards (the team's design, screens/feed) ---------------------------
@@ -1011,16 +1064,20 @@ meSections.push(bandSection, kindsSection);
 
 // ---- the dot portrait (SPEC §17): drawn with the landing page's face() on lavender ----------
 
-export function portraitPatch(rows, { small = false } = {}) {
+export function portraitPatch(rows, { small = false, colors = null, tile = false } = {}) {
   const cv = h('canvas', { class: 'face-cv', 'aria-hidden': 'true' });
-  const patch = h('div', { class: `tc-ground portrait${small ? ' small' : ''}`, role: 'img', 'aria-label': 'picture in dots' }, cv);
+  // face() (vendor/face.js) reads --ink (hair, eyes), --pollen (skin), --glyph (clothes)
+  if (colors) {
+    const map = { hair: '--ink', skin: '--pollen', clothes: '--glyph' };
+    for (const [k, v] of Object.entries(colors)) if (map[k] && /^#[0-9a-f]{6}$/.test(v)) cv.style.setProperty(map[k], v);
+  }
+  const patch = h('div', { class: `tc-ground portrait${small ? ' small' : ''}${tile ? ' tile' : ''}`, role: 'img', 'aria-label': 'picture in dots' }, cv);
   requestAnimationFrame(() => {
     if (cv.isConnected && window.TacitFace) state.stops.push(window.TacitFace.draw(cv, rows));
   });
   return patch;
 }
 
-personHeader.push((p) => (p.portrait ? portraitPatch(p.portrait) : null));
 
 const PHOTO_MAX_PX = 1024;
 const PHOTO_MAX_CHARS = 1500000;
@@ -1095,12 +1152,13 @@ function pictureSection() {
     const out = await post('/api/portrait', body);
     body.photo = null;
     fileInput.value = '';
-    fill(candidates, h('p', { text: 'pick one:' }), ...out.candidates.map((rows) => h('button', {
+    const colors = out.colors || [];
+    fill(candidates, h('p', { text: 'pick one:' }), ...out.candidates.map((rows, i) => h('button', {
       type: 'button', class: 'candidate', 'aria-label': 'use this picture',
       onclick: (ev) => act(ev.currentTarget, async () => {
-        const kept = await putPortrait(rows, mode);
+        const kept = await putPortrait(rows, mode, colors[i] || null);
         if (kept) { await refreshMe(); render(); }
-      }) }, portraitPatch(rows, { small: true }))));
+      }) }, portraitPatch(rows, { small: true, colors: colors[i] || null }))));
   }));
   card.append(
     state.me.portrait ? h('div', { class: 'row' }, h('button', { type: 'button', class: 'tc-textlink', text: 'remove my picture',
@@ -1113,14 +1171,39 @@ function pictureSection() {
   return h('div', { class: 'stack' }, phrase('your picture'), card);
 }
 
-function putPortrait(rows, source) {
-  return put('/api/portrait', { map: rows, source });
+function putPortrait(rows, source, colors) {
+  return put('/api/portrait', { map: rows, source, colors });
 }
 
 meSections.push(pictureSection);
 
-screens.me = function me(root) {
+function profileForm() {
   const m = state.me;
+  const field = (name, label, value, hint) => h('label', {}, h('span', { text: label }),
+    h('input', { name, value: value || '', maxlength: name === 'location' || name === 'company' ? 60 : 160, placeholder: hint }));
+  const form = h('form', { class: 'tc-card form' },
+    field('location', 'based in', m.location, 'Belgrade'),
+    field('company', 'company', m.company, 'Nebius Group'),
+    field('expertise', 'expertise (up to 5, commas between)', (m.expertise || []).join(', '), 'AI adoption, Voice agents'),
+    field('worth_knowing', 'worth knowing (up to 5, commas between)', (m.worth_knowing || []).join(', '), 'Speaks five languages, Made an AI film'),
+    h('button', { type: 'submit', class: 'tc-btn', text: 'save your profile' }));
+  form.addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const f = new FormData(form);
+    const list = (k) => String(f.get(k) || '').split(',').map((x) => x.trim().slice(0, 30)).filter(Boolean).slice(0, 5);
+    act(form.querySelector('[type=submit]'), async () => {
+      state.me = await patch('/api/me', { location: String(f.get('location') || '').trim(), company: String(f.get('company') || '').trim(),
+        expertise: list('expertise'), worth_knowing: list('worth_knowing') });
+      toast('Saved.');
+      render();
+    });
+  });
+  return h('div', { class: 'stack' }, phrase('your profile'), form);
+}
+
+screens.me = async function me(root) {
+  const m = state.me;
+  const mine = await get(`/api/people/${encodeURIComponent(m.id)}`).catch(() => null);
   const toggle = (name, label) => {
     const box = h('input', { type: 'checkbox', checked: Boolean(m[name]) });
     box.addEventListener('change', () => act(box, async () => {
@@ -1128,17 +1211,16 @@ screens.me = function me(root) {
     }).then(() => { box.checked = Boolean(state.me && state.me[name]); }));
     return h('label', { class: 'check' }, box, h('span', { text: label }));
   };
-  fill(root, 
-    m.portrait ? portraitPatch(m.portrait) : null,
-    title(firstName(m.name).toLowerCase() || 'me'),
-    m.headline ? h('p', { class: 'lede', text: m.headline }) : null,
-    h('p', { class: 'counts', text: `${m.counts.published} published · ${m.counts.followers} followers · ${m.counts.following} following` }),
+  fill(root,
+    mine ? profileCard(mine, { isMe: true }) : title(firstName(m.name).toLowerCase() || 'me'),
+    h('p', { class: 'counts', text: `${m.counts.followers} follower${m.counts.followers === 1 ? '' : 's'} · ${m.counts.following} following · ${m.counts.skills - m.counts.published} draft${m.counts.skills - m.counts.published === 1 ? '' : 's'}` }),
     h('nav', { class: 'profile-links', 'aria-label': 'yours' },
       h('a', { class: 'tc-btn on-ground', href: '#/skills', text: `your skills (${m.counts.skills})` }),
       h('a', { class: 'tc-btn on-ground quiet', href: '#/moments', text: 'your moments' }),
       h('a', { class: 'tc-btn on-ground quiet', href: '#/transcript', text: 'your transcript' }),
       h('a', { class: 'tc-btn on-ground quiet', href: '#/call', text: 'have a conversation' }),
       h('a', { class: 'tc-btn on-ground quiet', href: `#/people/${encodeURIComponent(m.id)}`, text: 'how others see you' })),
+    profileForm(),
     phrase('what you agreed to'),
     h('div', { class: 'tc-card form' },
       toggle('consent_lookup', "Look me up on the web (Exa) so the interview starts from what's public"),
