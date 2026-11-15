@@ -420,8 +420,11 @@
   Array.prototype.forEach.call(document.querySelectorAll('[data-open-join]'), function (button) { button.addEventListener('click', openPop); });
   // The pinned start button hides while the last section's own button is on screen, so there are never two side by side.
   var pin = document.querySelector('.pin'), lastBtn = document.querySelector('.end [data-open-join]');
-  if (pin && lastBtn && 'IntersectionObserver' in window) {
-    new IntersectionObserver(function (es) { pin.classList.toggle('away', es[es.length - 1].isIntersecting); }).observe(lastBtn);
+  if (pin && lastBtn) {
+    var pinCheck = function () { var r = lastBtn.getBoundingClientRect(); pin.classList.toggle('away', r.top < (window.innerHeight || 0) && r.bottom > 0); };
+    window.addEventListener('scroll', pinCheck, { passive: true });
+    window.addEventListener('resize', pinCheck);
+    pinCheck();
   }
   if (pop) {
     Array.prototype.forEach.call(pop.querySelectorAll('[data-close]'), function (button) { button.addEventListener('click', closePop); });

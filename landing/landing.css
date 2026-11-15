@@ -45,8 +45,14 @@ section::before{ content:""; position:absolute; inset:-10% 0; z-index:0; pointer
 .person::before{ background:radial-gradient(34% 40% at 24% 50%, #F4B6D2 0%, rgba(244,182,210,.5) 36%, rgba(244,182,210,0) 72%), radial-gradient(40% 46% at 92% 50%, #3D3580 0%, rgba(61,53,128,0) 74%); }
 .how::before{ background:radial-gradient(44% 40% at 22% 40%, rgba(181,138,214,.85) 0%, rgba(181,138,214,0) 70%); }
 .end::before{ inset:-10% 0 0; background:
-  radial-gradient(46% 50% at 50% 50%, #FFD9A0 0%, rgba(255,217,160,.6) 36%, rgba(255,217,160,0) 72%),
+  radial-gradient(46% 50% at 50% 50%, rgba(255,200,150,.3) 0%, rgba(255,200,150,.14) 40%, rgba(255,200,150,0) 72%),
   radial-gradient(34% 36% at 100% 30%, #3D3580 0%, rgba(61,53,128,0) 74%); }
+/* the closing glow is drawn in pixels: small squares on a grid, brightest in the middle, like the dots of the first screen
+   (a warm gradient seen through a grid of squares; the soft glow under it is kept faint) */
+.end::after{ content:""; position:absolute; inset:-10% 0 0; z-index:0; pointer-events:none;
+  background:radial-gradient(48% 52% at 50% 50%, #FFE2A8 0%, rgba(255,226,168,.85) 30%, rgba(255,226,168,.4) 54%, rgba(255,226,168,0) 76%);
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect x='2' y='2' width='4' height='4'/%3E%3C/svg%3E") 50% 50%/.6rem .6rem;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect x='2' y='2' width='4' height='4'/%3E%3C/svg%3E") 50% 50%/.6rem .6rem; }
 
 /* ---------- the title: Geist Pixel, and the dot of the i built from small dots ---------- */
 .brand{ display:inline-block; font:400 2.7rem/1 var(--pixel); font-variation-settings:"ELSH" 50; letter-spacing:0; text-decoration:none;
@@ -253,7 +259,8 @@ h2{ font:400 clamp(2rem, 4.3vw, 3.5rem)/1.03 var(--serif); letter-spacing:-.01em
   .person .copy{ order:-1; }
   .person::before{ background:radial-gradient(90% 26% at 50% 66%, #F4B6D2 0%, rgba(244,182,210,.5) 36%, rgba(244,182,210,0) 72%); }
   .page{ max-width:34rem; }
-  .end::before{ background:radial-gradient(100% 42% at 50% 46%, #FFD9A0 0%, rgba(255,217,160,.6) 36%, rgba(255,217,160,0) 72%); }
+  .end::before{ background:radial-gradient(100% 42% at 50% 46%, rgba(255,200,150,.3) 0%, rgba(255,200,150,.14) 40%, rgba(255,200,150,0) 72%); }
+  .end::after{ background:radial-gradient(105% 52% at 50% 48%, #FFE2A8 0%, rgba(255,226,168,.8) 26%, rgba(255,226,168,.3) 56%, rgba(255,226,168,0) 90%); }
   .journey{ gap:3.2rem; }
   .journey li{ grid-template-columns:minmax(0,1fr); padding-left:4.4rem; }
   .stage{ max-width:24rem; }
