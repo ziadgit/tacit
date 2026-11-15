@@ -1162,7 +1162,14 @@ function pictureSection() {
       toast("Describe how you'd like to look."); return;
     }
     fill(candidates, h('p', { class: 'muted-ink', text: 'making four pictures… this can take a minute' }));
-    const out = await post('/api/portrait', body);
+    let out;
+    try {
+      out = await post('/api/portrait', body);
+    } catch (e) {
+      // say it where the person is looking, and keep it there (a toast is gone in 4 s)
+      fill(candidates, h('p', { class: 'form-error', role: 'alert', text: errorText(e) }));
+      throw e;
+    }
     body.photo = null;
     fileInput.value = '';
     const colors = out.colors || [];
@@ -1173,7 +1180,7 @@ function pictureSection() {
         if (kept) { await refreshMe(); render(); }
       }) }, portraitPatch(rows, { small: true, colors: colors[i] || null }))));
   }));
-  card.append(
+  fill(card,
     state.me.portrait ? h('div', { class: 'row' }, h('button', { type: 'button', class: 'tc-textlink', text: 'remove my picture',
       onclick: (ev) => act(ev.currentTarget, async () => { await del('/api/portrait'); await refreshMe(); render(); }) })) : null,
     state.config.portraits_enabled ? modeRow : null,

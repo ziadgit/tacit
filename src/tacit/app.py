@@ -39,8 +39,9 @@ class PWAFiles(StaticFiles):
 
     async def get_response(self, path: str, scope) -> Response:
         resp = await super().get_response(path, scope)
-        if path.endswith("sw.js"):
-            resp.headers["Cache-Control"] = "no-cache"
+        # Always revalidate (ETag → a cheap 304): a release must reach phones, and the service
+        # worker must never fill a new cache from a stale browser copy.
+        resp.headers["Cache-Control"] = "no-cache"
         if path.endswith(".webmanifest"):
             resp.headers["Content-Type"] = "application/manifest+json"
         return resp

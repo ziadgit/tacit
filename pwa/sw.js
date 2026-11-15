@@ -1,5 +1,5 @@
 // tacit service worker. The shell is cache-first; /api/* is network-only and never cached.
-const CACHE = 'tacit-shell-v6'; // bump on every release, or phones keep the old shell
+const CACHE = 'tacit-shell-v7'; // bump on every release, or phones keep the old shell
 const SHELL = [
   '/app/',
   '/app/index.html',
@@ -17,7 +17,10 @@ const SHELL = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // cache: 'reload' skips the browser's HTTP cache, so a new release caches the new files
+  event.waitUntil(caches.open(CACHE)
+    .then((c) => c.addAll(SHELL.map((url) => new Request(url, { cache: 'reload' }))))
+    .then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {

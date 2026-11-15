@@ -208,3 +208,11 @@ def test_profile_card_design():
                   "'recommends'", "'Connect in person'", "`Follow ${p.first_name}`",
                   "'save your profile'", "@${p.handle"):
         assert words in app, words
+
+
+def test_app_files_always_revalidate(tmp_path):
+    c = client(tmp_path)
+    for path in ("/app/", "/app/app.js", "/app/api.js", "/app/style.css", "/app/sw.js"):
+        assert c.get(path).headers["cache-control"] == "no-cache", path
+    sw = (PWA / "sw.js").read_text()
+    assert "cache: 'reload'" in sw
