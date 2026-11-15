@@ -286,3 +286,8 @@ a.tc-btn { text-decoration: none; }
 .avatar-btn { position: relative; padding: 0; border: 0; background: none; cursor: pointer; display: grid; justify-items: center; gap: 4px; min-height: 44px; }
 .avatar-btn:focus-visible { outline: 3px solid var(--t-acc); outline-offset: 3px; border-radius: 14px; }
 .avatar-hint { font: 600 13px/1 var(--t-sans); color: var(--t-acc); text-decoration: underline; text-underline-offset: 2px; }
+
+/* a kept minute's words in the feed (on the ground) */
+.transcript.mini.on-ground { width: 100%; margin: 4px 0; }
+.transcript.mini.on-ground li { background: rgba(35,25,90,.32); color: var(--t-glyph); }
+.transcript.mini.on-ground li.you { background: rgba(251,246,236,.94); color: var(--t-ink); }

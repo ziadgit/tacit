@@ -1,5 +1,5 @@
 // tacit service worker. The shell is cache-first; /api/* is network-only and never cached.
-const CACHE = 'tacit-shell-v8'; // bump on every release, or phones keep the old shell
+const CACHE = 'tacit-shell-v9'; // bump on every release, or phones keep the old shell
 const SHELL = [
   '/app/',
   '/app/index.html',

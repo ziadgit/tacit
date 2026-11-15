@@ -630,6 +630,17 @@ export function feedItem(item) {
         h('h2', { class: 'line', text: item.skill ? item.skill.title : 'a skill' }),
         h('p', { class: 'note', text: 'you were in the same conversation, both wearing tacit' })));
   }
+  if (item.type === 'heard' && item.kind === 'kept') {
+    const b = item.body || {};
+    const found = (b.found || []).map((k) => KIND_WORDS[k] || k);
+    return story('You', [{ name: 'You' }, 'kept a minute'], item.at,
+      h('h2', { class: 'line', text: found.length ? `with ${found.join(', ')}` : 'You kept this' }),
+      (b.lines || []).length ? h('ol', { class: 'transcript mini on-ground' }, ...b.lines.map((l) => h('li', { class: l.you ? 'you' : null },
+        h('span', { class: 'who' }, h('b', { text: speakerLabel(l) })), h('p', { text: l.text })))) : null,
+      b.more ? h('p', { class: 'note', text: `and ${b.more} more line${b.more === 1 ? '' : 's'}` }) : null,
+      h('p', { class: 'acts' }, h('a', { class: 'link', href: '#/moments', text: 'in your moments' }),
+        h('span', { class: 'note', text: 'only you see this' })));
+  }
   if (item.type === 'heard') {
     const b = item.body || {};
     const verb = HEARD_WORDS[item.kind] || 'said something';

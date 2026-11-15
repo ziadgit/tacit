@@ -21,6 +21,7 @@ from .domain import (
     first_name,
     now,
 )
+from .scenarios import wearer_speaker
 from .store import Store
 
 log = logging.getLogger("tacit.network")
@@ -28,6 +29,7 @@ FEED_MAX = 50
 CREATIVE_MIN_S = 5 * 60
 PASS_NEW = timedelta(hours=24)
 HEARD_DAYS = timedelta(days=7)
+KEPT_LINES = 6
 HEARD_KINDS = ("advice_given", "explanation", "lesson", "demonstration", "idea",
                "recommendation", "decision", "commitment", "question")
 # Fields of a shared moment's body that never go to the feed: words that might be a bystander's.
@@ -214,6 +216,22 @@ def feed_items(store: Store, viewer: User) -> list[FeedItemOut]:
                                      title=m.title, body={k: v for k, v in m.body.items()
                                                           if k != "matches"},
                                      only_you=True))
+    # minutes the wearer kept (double-tap or "keep"), with their words while they're kept (24 h)
+    for m in store.moments_for(viewer.id, since=heard_since, kind="kept"):
+        if m.status == "dismissed" or not m.segment_ids:
+            continue
+        segs = sorted((x for sid in m.segment_ids if (x := store.get("segments", sid))),
+                      key=lambda x: x.started_at)
+        if not segs and not m.body.get("found"):
+            continue
+        wearer = wearer_speaker(segs)
+        lines = [{"you": wearer is not None and x.speaker == wearer, "speaker": x.speaker,
+                  "text": x.text} for x in segs[:KEPT_LINES]]
+        items.append(FeedItemOut(type="heard", id=f"heard:{m.id}", at=m.ended_at, kind="kept",
+                                 title=m.title, body={"lines": lines,
+                                                      "more": max(0, len(segs) - KEPT_LINES),
+                                                      "found": m.body.get("found") or []},
+                                 only_you=True))
     for m in store.moments_for(viewer.id, kind="handshake"):
         pid = m.body.get("person_id")
         other = user(pid) if pid and m.status != "dismissed" else None

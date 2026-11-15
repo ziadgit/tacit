@@ -179,3 +179,25 @@ def test_old_databases_get_the_new_columns(tmp_path):
     assert u.name == "Old User" and u.expertise == [] and u.location is None
     s.update_user("u1", company="Acme")
     assert s.get_user("u1").company == "Acme"
+
+
+def test_kept_minutes_with_words_are_in_your_feed(tmp_path):
+    from tacit.domain import BridgeDevice, Segment
+
+    store, a, b, maya, ana = pair(tmp_path)
+    dev = store.add_device(BridgeDevice(user_id=maya, band=16, token_sha256="x"))
+    t = now()
+    segs = [store.add_segment(Segment(device_id=dev.id, user_id=maya,
+                                      started_at=t - timedelta(seconds=s), ended_at=t,
+                                      speaker=spk, text=txt, level=lvl))
+            for s, spk, lvl, txt in [(40, 0, 15, "Remember this one."), (30, 1, 32, "Sure.")]]
+    kept = store.add_moment(Moment(user_id=maya, kind="kept", started_at=t - timedelta(minutes=1),
+                                   ended_at=t, segment_ids=[x.id for x in segs],
+                                   body={"found": ["idea"]}))
+    store.add_moment(Moment(user_id=maya, kind="kept", started_at=t, ended_at=t))   # empty tap
+    items = [i for i in a.get("/api/feed").json() if i["type"] == "heard" and i["kind"] == "kept"]
+    assert len(items) == 1 and items[0]["id"] == f"heard:{kept.id}" and items[0]["only_you"]
+    assert [(x["text"], x["you"]) for x in items[0]["body"]["lines"]] == [
+        ("Remember this one.", True), ("Sure.", False)]
+    assert items[0]["body"]["found"] == ["idea"]
+    assert not [i for i in b.get("/api/feed").json() if i["type"] == "heard"]   # only Maya's
