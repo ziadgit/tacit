@@ -213,6 +213,8 @@ class Bridge:
         self.band = band
         self.server = server
         self.ears_factory = ears_factory or (lambda on, kt: deepgram_ears(on, kt, settings))
+        # The kit's Deepgram engine prints the sound notice itself when it starts.
+        self.engine_prints_notice = ears_factory is None
         self.templates = templates if templates is not None else gestures.load_templates(
             settings.tacit_data_dir / "gestures.json")   # built-ins + `tacit gestures record`
         self.detector = gestures.GestureDetector(self.templates, gestures.MUTE_LIMIT)
@@ -294,8 +296,9 @@ class Bridge:
     async def setup(self) -> None:
         """Everything is off after a (re)connect: set it all up again."""
         await self.band.set_motion(accel_range=8, gyro_range=1000)
-        streams: dict[str, Any] = dict(events=True, motion=100, sensors="both", activity=1,
-                                       battery=60)
+        # No `activity` (steps): nothing reads it, and with a still band the kit's stream watch
+        # mistook its silence for "another program on USB took this stream".
+        streams: dict[str, Any] = dict(events=True, motion=100, sensors="both", battery=60)
         if self.listening and not self.muted:
             streams.update(audio=True, mic_level=MIC_LEVEL_S)
         else:
@@ -303,7 +306,7 @@ class Bridge:
         await self.band.configure(**streams)
 
     async def start_listening(self) -> None:
-        if not self.noticed:
+        if not self.noticed and not self.engine_prints_notice:
             self.echo(SOUND_NOTICE)
             self.noticed = True
         self.start_ears()
