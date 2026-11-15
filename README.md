@@ -15,13 +15,56 @@ A short phone call and a wristband turn what you say into skills signed with you
 
 ---
 
-## What it is
+## The pitch
 
-Most of what experienced people know never gets written down: how they open a hard
-conversation, why they cut scope on a Monday, the one question they always ask a customer.
-It lives in conversations and it disappears with them.
+You know someone who just *knows*. The founder who opens every update with one number. The
+engineer who won't touch a bug until she can make it fail on demand. The friend who tells you,
+over coffee, the one thing that saved their launch.
 
-**tacit keeps it.** A **skill** is one thing a person knows how to do, in their own words:
+None of that is written down anywhere. It's **tacit knowledge**: it lives in conversations,
+and it evaporates when the conversation ends.
+
+**tacit catches it before it evaporates.** Talk for ten minutes with tacit on the phone, or
+just wear the band through a normal day, and what you know comes out as **skills**: short,
+specific, signed with your name, in your own words. Publish the ones you're proud of. Follow
+the people whose taste you trust. Let your agent put their skills to work.
+
+> Agents already have skills. **People have taste.** tacit is how it gets around.
+
+### What you get
+
+| when you learn | when you explain |
+|---|---|
+| **A place for the advice people give you.** None of it gets lost between conversations. | **A profile that builds itself.** From your context and your conversations, not a form. |
+| **What your network recommends.** The tools people you trust actually use, and why. | **A personal brand from what you already say.** People follow your skills and your advice. |
+| **Their tacit knowledge, working for you.** How they really do things, as skills your agent can apply. | **Your name on everything that travels.** Every skill and every piece of advice stays yours. |
+
+### A day with tacit
+
+*(Maya and Ana are invented examples.)*
+
+**9:12** Maya gets a call from tacit. *"What's something you do that most people get wrong?"*
+She talks about investor updates for four minutes. Before she hangs up, her phone already shows
+a draft: **Open an update with the number.** *"They forget the story. They remember 40%."*
+Jev says it *looks specific*. She publishes it.
+
+**11:40** Coffee with Ana. Both wear the band. Maya explains how she cuts scope on Mondays.
+Ana's band hears advice *received*; Maya's hears advice *given*. The server sees the two
+conversations overlap.
+
+**11:58** Maya publishes the new skill. Both feeds light up, orange for a moment:
+*maya passed **cut the feature before the deadline does** to ana.*
+
+**15:05** Ana is at the whiteboard, explaining her pricing model to a colleague. The band
+notices the drawing and the explanation together: a **demonstration**, ranked first in her
+timeline. She makes it a skill.
+
+**15:31** Someone at the next table says *"wait, are you recording this?"* Ana draws an X in
+the air. The light blinks white twice and goes dark. The last fifteen seconds are gone.
+
+### The skill, up close
+
+A **skill** is one thing a person knows how to do, in their own words:
 
 | part | example |
 |---|---|
@@ -31,7 +74,27 @@ It lives in conversations and it disappears with them.
 | **quote**, their exact words | *"They forget the story. They remember 40%."* |
 
 Every skill is signed by the person who said it. **Learners** follow **experts**; their feed
-fills with skills they can use, and their agents can apply them.
+fills with skills they can use, and their agents can apply them. Some skills are for followers
+who unlock them. Every one is a draft until its owner says it's right.
+
+### Questions people ask
+
+**Is it always listening?** Only when you say so. Blue light on the band means listening; no
+blue means not. The app shows a blue *listening* pill too, and nothing else in tacit is blue.
+
+**Can I make it stop?** Three ways, all instant: draw an X or a figure 8 in the air, tap mute
+in the app, or have *anyone* nearby say "stop recording". The light going dark tells you it
+worked. Unmuting takes a deliberate second step, on purpose.
+
+**What if my friend says something brilliant?** It stays theirs. Words from people who aren't
+on tacit are never published, quoted or credited. If they *are* on tacit and you were talking,
+it becomes a pass: they get the credit, you get the skill.
+
+**Do you keep recordings?** No. Calls keep only the skills you approve. Band transcripts are
+yours alone, gone after 24 hours, and you can delete them any time.
+
+**Why a wristband?** Because the best advice isn't given in meetings you'd think to record.
+It's given in hallways, over lunch, at the whiteboard.
 
 ## The journey
 
