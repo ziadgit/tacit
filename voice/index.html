@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tacit · voice commands</title>
+  <style>
+    :root {
+      --field: #6a5fb3; --field-deep: #4d4391; --paper: #fbf6ec; --ink: #231e3d; --soft: #575072;
+      --blue: #1f5eff; --line: #ddd7d2; --good: #1f8a4c; --tag: #e6e0f4;
+      font-family: ui-sans-serif, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: var(--ink);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: linear-gradient(160deg, var(--field), var(--field-deep)); padding: 22px 26px; }
+    h1 { margin: 0 0 2px; font: 400 36px/1 Georgia, "Times New Roman", serif; color: var(--paper); letter-spacing: -0.02em; }
+    .lead { margin: 0 0 16px; color: #e6e0ff; font-size: 15px; }
+    .grid { display: grid; grid-template-columns: minmax(280px, 400px) 1fr; gap: 20px; align-items: start; }
+    .card { background: var(--paper); border-radius: 20px; padding: 16px 18px; min-width: 0; margin-bottom: 14px; }
+    .card h2 { margin: 0 0 10px; font: 600 12px/1 ui-monospace, Menlo, monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--soft); }
+    button { font: inherit; font-size: 15px; padding: 9px 16px; border-radius: 999px; border: 0; background: var(--ink); color: #fff; cursor: pointer; }
+    button.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); padding: 6px 12px; font-size: 13px; }
+    button:disabled { opacity: .45; cursor: default; }
+    input[type="password"], input[type="text"] { font: inherit; font-size: 15px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: #fff; flex: 1; min-width: 180px; }
+    input[type="number"] { font: inherit; font-size: 15px; width: 120px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: #fff; }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .pill { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 13px; border: 1px solid var(--line); color: var(--soft); }
+    .pill[data-on="true"] { border-color: var(--blue); color: #fff; background: var(--blue); }
+    .note { margin: 6px 0 0; font-size: 13px; color: var(--soft); }
+    .warn { margin: 8px 0 0; padding: 8px 12px; border-radius: 10px; background: #e7ecff; color: #173fb0; font-size: 14px; font-weight: 600; }
+    .message { margin: 0 0 14px; color: var(--paper); font-size: 15px; min-height: 1.4em; }
+
+    .stage { position: sticky; top: 16px; display: flex; flex-direction: column; align-items: center; }
+    .screen-name { color: var(--paper); font: 400 24px/1.1 Georgia, serif; margin: 0 0 10px; }
+    .frame { position: relative; height: min(78vh, 760px); max-width: 100%; overflow: hidden; border-radius: 28px; box-shadow: 0 16px 40px #14102866; background: var(--field); }
+    .frame img { position: absolute; display: block; height: auto; max-width: none; }
+    .frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: var(--field); }
+    .frame.pop { animation: pop .28s ease-out; }
+    @keyframes pop { from { transform: scale(.96); opacity: .3; } to { transform: none; opacity: 1; } }
+    .idle { width: 100%; border: 2px dashed #cfc7ee; border-radius: 28px; padding: 28px 22px; color: #efeaff; text-align: center; }
+    .idle p { margin: 0 0 10px; font: 400 22px/1.25 Georgia, serif; }
+    .idle small { font-size: 14px; color: #d9d2f3; }
+
+    .last { transition: background .3s; }
+    .last[data-fresh="true"] { background: #e4f5ea; }
+    .last .heard { font: 400 20px/1.3 Georgia, serif; margin: 0 0 4px; color: var(--soft); }
+    .last .did { font: 600 26px/1.2 ui-sans-serif, -apple-system, sans-serif; margin: 0 0 4px; }
+    .last .how { font: 13px ui-monospace, Menlo, monospace; color: var(--soft); margin: 0; }
+    .hint { min-height: 1.3em; margin: 6px 0 0; color: var(--blue); font-weight: 600; font-size: 15px; }
+    .bar { height: 5px; border-radius: 3px; background: var(--blue); transform-origin: left; margin-top: 6px; }
+    #heard { list-style: none; margin: 0; padding: 0; font-size: 15px; color: var(--soft); }
+    #heard li:last-child { color: var(--ink); }
+    #interim { margin: 4px 0 0; min-height: 1.3em; font-size: 15px; color: var(--blue); font-style: italic; }
+    .say-list { display: flex; flex-wrap: wrap; gap: 6px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    td { padding: 5px 8px 5px 0; border-top: 1px solid var(--line); vertical-align: top; }
+    td.heard { color: var(--soft); }
+    tr.done td:nth-child(5) { font-weight: 600; }
+    tr.no-wake td, tr.no-command td, tr.tap-miss td { color: #9a5b00; }
+    .counts { font: 13px/1.5 ui-monospace, Menlo, monospace; color: var(--soft); margin: 0 0 8px; }
+    .scroll { max-height: 260px; overflow: auto; }
+    @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } .stage { position: static; } }
+  </style>
+</head>
+<body>
+  <h1>Tacit · voice commands</h1>
+  <p class="lead">Say “Vexo, open the feed”. Or double-tap the band and say “open the feed”.</p>
+  <p class="message" id="message">Starting…</p>
+
+  <div class="grid">
+    <section class="stage">
+      <p class="screen-name" id="screen-name">No screen open</p>
+      <div class="frame" id="frame" hidden><img id="shot" alt=""><iframe id="page" title="Feed" hidden></iframe></div>
+      <div class="idle" id="idle">
+        <p>“Vexo, open the feed”</p>
+        <p>“Vexo, open my profile”</p>
+        <p>“Vexo, open the network”</p>
+        <p>“Vexo, connect”</p>
+        <p>“What did Ziad recommend me today?”</p>
+        <p>“Vexo, go back”</p>
+        <p>“Vexo, stop listening”</p>
+        <p>Shake hands → connected</p>
+        <small>The screens are pictures of the designs, standing in for the app.</small>
+      </div>
+    </section>
+
+    <div>
+      <section class="card last" id="last" data-fresh="false">
+        <h2>Last command</h2>
+        <p class="heard" id="last-heard">Nothing yet</p>
+        <p class="did" id="last-did">—</p>
+        <p class="how" id="last-how"></p>
+        <p class="hint" id="hint"></p>
+        <div id="armed" hidden><div class="bar" id="armed-bar"></div></div>
+      </section>
+
+      <section class="card">
+        <h2>Bands and microphone</h2>
+        <div class="row">
+          <button id="connect">Connect</button>
+          <span class="pill" id="st-band" data-on="false">Band</span>
+          <span class="pill" id="st-mic" data-on="false">Microphone off</span>
+          <span class="pill" id="st-ears" data-on="false">Deepgram</span>
+        </div>
+        <div class="row">
+          <input type="number" id="other-number" min="1" max="999" placeholder="other band" aria-label="The other band's number">
+          <button id="connect-other" disabled>Connect the other band</button>
+          <span class="pill" id="st-other" data-on="false">Other band</span>
+        </div>
+        <p class="note">For the handshake: connect your teammate’s band here too (only your own team’s band). Then shake hands. When both wrists move together, you two are connected and the network opens.</p>
+        <div class="row">
+          <input type="password" id="dg-key" placeholder="Deepgram key" autocomplete="off" aria-label="Deepgram key">
+          <button class="ghost" id="forget" hidden>Forget key</button>
+          <button id="mic" disabled>Turn microphone on</button>
+        </div>
+        <p class="note">Before you turn it on, tell the people near you: the band’s light goes solid blue, the microphone hears everyone nearby, and the sound is sent over the internet to Deepgram. The key stays in this page’s memory only.</p>
+        <p class="warn" id="deepgram-note" hidden>The microphone is ON (solid blue light). It hears everyone near the band, and the sound is being sent to Deepgram. Say “Vexo, stop listening” to turn it off.</p>
+        <label class="note"><input type="checkbox" id="sound" checked> Play a short sound when a command is understood</label>
+      </section>
+
+      <section class="card">
+        <h2>What the band hears</h2>
+        <ul id="heard"></ul>
+        <p class="note" id="heard-empty">Nothing heard yet.</p>
+        <p id="interim"></p>
+      </section>
+
+      <section class="card">
+        <h2>Type a command (no band needed; the fallback on stage)</h2>
+        <div class="row">
+          <input type="text" id="typed" placeholder="Vexo, open the feed   (then Enter)" aria-label="Type a command">
+        </div>
+        <div class="say-list">
+          <button class="ghost" data-say="Vexo, open the feed">feed</button>
+          <button class="ghost" data-say="Vexo, open my profile">profile</button>
+          <button class="ghost" data-say="Vexo, open the network">network</button>
+          <button class="ghost" data-say="Vexo, connect">connect</button>
+          <button class="ghost" data-say="What did Ziad recommend me today?">Ziad?</button>
+          <button class="ghost" data-say="Vexo, go back">back</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Test log</h2>
+        <p class="counts" id="counts"></p>
+        <div class="row">
+          <button class="ghost" id="copy">Copy the log</button>
+          <button class="ghost" id="clear">Clear</button>
+        </div>
+        <div class="scroll"><table><tbody id="log"></tbody></table></div>
+      </section>
+    </div>
+  </div>
+
+  <script type="module" src="voice-commands.js"></script>
+</body>
+</html>

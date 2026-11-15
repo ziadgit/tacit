@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tacit · handshake</title>
+  <style>
+    :root {
+      --field: #6f63b8; --field-deep: #4d4391; --paper: #fbf6ea; --ink: #1d1838; --soft: #6c6690;
+      --blue: #2f5bff; --line: #e2dccb; --good: #1f8a4c;
+      font-family: ui-sans-serif, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: var(--ink);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: linear-gradient(160deg, var(--field), var(--field-deep)); padding: 28px; }
+    h1 { margin: 0 0 4px; font: 400 44px/1 Georgia, "Times New Roman", serif; color: var(--paper); letter-spacing: -0.02em; }
+    .lead { margin: 0 0 22px; color: #e6e0ff; font-size: 17px; max-width: 60ch; }
+    .grid { display: grid; grid-template-columns: 1fr minmax(240px, 0.8fr) 1fr; gap: 18px; align-items: stretch; }
+    .card { background: var(--paper); border-radius: 22px; padding: 18px 20px; min-width: 0; }
+    .card h2 { margin: 0 0 10px; font: 600 13px/1 ui-monospace, Menlo, monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--soft); }
+    .name { font: 400 26px/1.1 Georgia, serif; margin: 0 0 10px; }
+    canvas { width: 100%; height: 110px; display: block; background: #f1ead9; border-radius: 12px; }
+    .numbers { display: flex; gap: 16px; margin: 10px 0 0; font: 14px ui-monospace, Menlo, monospace; color: var(--soft); }
+    .numbers b { color: var(--ink); font-weight: 600; }
+    .tag { display: inline-block; margin-top: 10px; padding: 4px 10px; border-radius: 999px; font-size: 13px; border: 1px solid var(--line); color: var(--soft); }
+    .tag[data-on="true"] { border-color: var(--blue); color: var(--blue); background: #e7ecff; }
+    button { font: inherit; font-size: 15px; padding: 9px 16px; border-radius: 999px; border: 0; background: var(--ink); color: #fff; cursor: pointer; }
+    button.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+    button:disabled { opacity: .45; cursor: default; }
+    input[type="number"] { font: inherit; width: 84px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: #fff; }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+    .middle { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+    .ring { width: 170px; height: 170px; border-radius: 50%; border: 3px dashed #cfc7ee; display: grid; place-items: center;
+      font: 400 22px/1.15 Georgia, serif; color: var(--soft); transition: all .25s; padding: 14px; }
+    .ring[data-state="near"] { border-style: solid; border-color: var(--blue); color: var(--blue); }
+    .ring[data-state="yes"] { border-style: solid; border-color: var(--good); background: #e4f5ea; color: var(--good); transform: scale(1.06); }
+    .match { margin: 12px 0 0; font: 14px ui-monospace, Menlo, monospace; color: var(--soft); }
+    .match b { color: var(--ink); }
+    .tune { margin-top: 18px; }
+    .tune label { display: grid; grid-template-columns: 190px 1fr 56px; gap: 10px; align-items: center; font-size: 14px; margin: 6px 0; }
+    .tune output { font: 14px ui-monospace, Menlo, monospace; }
+    ol { margin: 8px 0 0; padding-left: 20px; font-size: 14px; color: var(--soft); max-height: 150px; overflow: auto; }
+    .message { margin: 16px 0 0; color: var(--paper); font-size: 15px; min-height: 1.4em; }
+    .demo { margin-top: 14px; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <h1>Tacit</h1>
+  <p class="lead">Handshake test. Two people, two bands. Shake hands: both wrists make the same motion at the same moment, and that is how Tacit knows you two have met.</p>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Band A · yours</h2>
+      <p class="name" id="name-a">not connected</p>
+      <div class="row">
+        <input type="number" id="number-a" min="1" max="999" placeholder="number" aria-label="Your band's number">
+        <button id="connect-a">Connect</button>
+      </div>
+      <canvas id="trace-a" width="600" height="220"></canvas>
+      <p class="numbers">strength <b id="energy-a">0.00</b> g · swings <b id="swings-a">0</b></p>
+      <span class="tag" id="shaking-a" data-on="false">shaking</span>
+    </section>
+
+    <section class="card middle">
+      <div class="ring" id="ring" data-state="idle">no handshake</div>
+      <p class="match">match <b id="match">0.00</b> · apart <b id="lag">0</b> ms · handshakes <b id="count">0</b></p>
+      <ol id="log"></ol>
+    </section>
+
+    <section class="card">
+      <h2>Band B · your teammate's</h2>
+      <p class="name" id="name-b">not connected</p>
+      <div class="row">
+        <input type="number" id="number-b" min="1" max="999" placeholder="number" aria-label="Your teammate's band number">
+        <button id="connect-b">Connect</button>
+      </div>
+      <canvas id="trace-b" width="600" height="220"></canvas>
+      <p class="numbers">strength <b id="energy-b">0.00</b> g · swings <b id="swings-b">0</b></p>
+      <span class="tag" id="shaking-b" data-on="false">shaking</span>
+    </section>
+  </div>
+
+  <section class="card tune">
+    <h2>Tuning (move these after a few real handshakes)</h2>
+    <label>How strong a shake counts <input type="range" id="min-energy" min="0.05" max="0.8" step="0.01"><output id="min-energy-out"></output></label>
+    <label>How closely the two must match <input type="range" id="min-match" min="0.3" max="0.95" step="0.01"><output id="min-match-out"></output></label>
+    <div class="demo" id="demo" hidden>
+      <div class="row">
+        <button class="ghost" id="sim-handshake">Pretend: handshake</button>
+        <button class="ghost" id="sim-alone">Pretend: one person shakes alone</button>
+        <button class="ghost" id="sim-apart">Pretend: two people shake, not together</button>
+        <button class="ghost" id="sim-walk">Pretend: both just move around</button>
+      </div>
+    </div>
+  </section>
+
+  <p class="message" id="message">Starting…</p>
+
+  <script>
+    if (location.protocol === 'file:') {
+      document.getElementById('message').textContent =
+        'This page was opened by double-click, so it cannot load the band library. In the repository folder run:  python3 -m http.server 8000 --bind 127.0.0.1  and open http://localhost:8000/handshake/ in Chrome.';
+    }
+  </script>
+  <script type="module" src="./handshake.js"></script>
+</body>
+</html>
