@@ -281,3 +281,8 @@ a.tc-btn { text-decoration: none; }
 .profile-acts { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 4px; }
 .profile-acts .tc-btn { flex: 1 1 140px; border-radius: 999px; min-height: 48px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
 @media (max-width: 420px) { .profile-rows { grid-template-columns: 96px 1fr; } .profile-name { font-size: 44px; } }
+
+/* your own avatar is a button to "your picture" */
+.avatar-btn { position: relative; padding: 0; border: 0; background: none; cursor: pointer; display: grid; justify-items: center; gap: 4px; min-height: 44px; }
+.avatar-btn:focus-visible { outline: 3px solid var(--t-acc); outline-offset: 3px; border-radius: 14px; }
+.avatar-hint { font: 600 13px/1 var(--t-sans); color: var(--t-acc); text-decoration: underline; text-underline-offset: 2px; }

@@ -447,6 +447,13 @@ function profileSkill(s, owner) {
   return h('li', {}, btn, more);
 }
 
+// From "how others see you" (#/people/<me>), the avatar goes to #/me and scrolls to the picture.
+let wantPicture = false;
+function goToPicture() {
+  wantPicture = true;
+  location.hash = '#/me';
+}
+
 export function profileCard(p, { isMe = false } = {}) {
   const n = (x, one, many) => h('span', { class: 'stat' }, h('b', { text: String(x) }), x === 1 ? one : many);
   const rows = [];
@@ -457,7 +464,14 @@ export function profileCard(p, { isMe = false } = {}) {
   if (p.worth_knowing && p.worth_knowing.length) rows.push(h('dt', { text: 'worth knowing' }), chips(p.worth_knowing, true));
   const skills = p.skills || [];
   return h('article', { class: 'tc-card profile-card' },
-    h('div', { class: 'who-row' }, avatar(p),
+    h('div', { class: 'who-row' }, isMe
+      ? h('button', { type: 'button', class: 'avatar-btn', 'aria-label': p.portrait ? 'change your picture' : 'make your picture',
+        onclick: () => {
+          if (location.hash !== '#/me') { goToPicture(); return; }
+          const el = document.getElementById('your-picture');
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } }, avatar(p), h('span', { class: 'avatar-hint', text: p.portrait ? 'change' : 'add picture' }))
+      : avatar(p),
       h('div', {}, h('p', { class: 'profile-name', text: p.first_name }), h('p', { class: 'handle', text: `@${p.handle || ''}` }))),
     p.headline ? h('p', { class: 'profile-headline', text: p.headline }) : null,
     h('p', { class: 'stats' }, n(p.skill_count, 'skill', 'skills'), n(p.post_count || 0, 'post', 'posts'),
@@ -1114,7 +1128,6 @@ export async function shrinkPhoto(file) {
 }
 
 function pictureSection() {
-  if (!state.config.portraits_enabled && !state.me.portrait) return null;
   const card = h('div', { class: 'tc-card form picture' });
   const candidates = h('div', { class: 'candidates' });
   let mode = 'words';
@@ -1167,8 +1180,9 @@ function pictureSection() {
     state.config.portraits_enabled ? words : null,
     state.config.portraits_enabled ? photo : null,
     state.config.portraits_enabled ? make : null,
+    state.config.portraits_enabled ? null : h('p', { class: 'muted-ink', text: 'Pictures aren\'t set up on this server yet (it needs a MiniMax key). Until then your profile shows your initial.' }),
     candidates);
-  return h('div', { class: 'stack' }, phrase('your picture'), card);
+  return h('div', { class: 'stack', id: 'your-picture' }, phrase('your picture'), card);
 }
 
 function putPortrait(rows, source, colors) {
@@ -1245,6 +1259,13 @@ screens.me = async function me(root) {
           h('button', { type: 'button', class: 'tc-btn quiet', text: 'keep my account', onclick: () => render() }));
       })),
   );
+  if (wantPicture) {
+    wantPicture = false;
+    requestAnimationFrame(() => {
+      const el = document.getElementById('your-picture');
+      if (el) el.scrollIntoView({ block: 'start' });
+    });
+  }
 };
 
 // ---- router ----------------------------------------------------------------------------
