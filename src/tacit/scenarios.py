@@ -221,7 +221,8 @@ class Scenarios:
         """Fill in moments whose extraction failed (the model was down, out of credit, ...),
         while their words are still kept (24 h). Then skills and passes follow as usual.
         After a failure, wait RETRY_AFTER before trying again."""
-        if self.llm is None or self.clock() < self._retry_at.get(dev.user_id, self.clock()):
+        wait_until = self._retry_at.get(dev.user_id)   # set only after a failure
+        if self.llm is None or (wait_until is not None and self.clock() < wait_until):
             return 0
         done = 0
         for m in self.store.moments_for(dev.user_id, since=self.clock() - RETENTION):
