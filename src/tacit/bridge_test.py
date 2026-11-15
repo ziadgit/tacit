@@ -443,3 +443,12 @@ async def test_bridge_writes_health_file(tmp_path):
     h = json.loads((tmp_path / "data" / "bridge-health.json").read_text())
     assert h["band_connected"] and h["listening"] and not h["muted"]
     await r.close()
+
+
+async def test_mute_and_unmute_are_reported_at_once(tmp_path):
+    r = await rig(tmp_path)
+    await r.bridge.mute("test")
+    assert r.server.named("state")[-1]["muted"] is True
+    await r.bridge.unmute("test")
+    assert r.server.named("state")[-1]["muted"] is False
+    await r.close()

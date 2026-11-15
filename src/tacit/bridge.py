@@ -342,8 +342,9 @@ class Bridge:
             await asyncio.get_running_loop().run_in_executor(None, _stop_quietly, ears)
         self.drop_recent(self.settings.mute_rewind_s)
         self.pending_rewind = max(self.pending_rewind, self.settings.mute_rewind_s)
-        await self.flush()
         await self.blink()
+        await self.flush()
+        await self.post_state()   # tell the app at once, not at the next 10 s report
 
     async def blink(self) -> None:
         try:
@@ -363,6 +364,7 @@ class Bridge:
         log.info("unmuted (%s)", reason)
         self.echo(f"tacit bridge: listening again ({reason})")
         await self.start_listening()
+        await self.post_state()
 
     def drop_recent(self, seconds: float) -> None:
         cut = self.clock() - seconds
