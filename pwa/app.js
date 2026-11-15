@@ -526,11 +526,14 @@ export function creativeLine(item) {
 }
 
 const POST_WORDS = { recommendation: 'recommends', lesson: 'learned', idea: 'had an idea' };
+const HEARD_WORDS = { advice_given: 'gave advice', explanation: 'explained how', lesson: 'learned',
+  demonstration: 'showed how', idea: 'had an idea', recommendation: 'recommended', decision: 'decided',
+  commitment: 'committed to something', question: 'asked' };
 
 // The four feed tabs and which item types each shows.
 export const FEED_TABS = {
   everything: null,
-  advice: new Set(['picked_up', 'post']),
+  advice: new Set(['picked_up', 'post', 'heard']),
   skills: new Set(['skill', 'pass']),
   people: new Set(['pass', 'creative', 'connected']),
 };
@@ -626,6 +629,18 @@ export function feedItem(item) {
         head([{ name: youGave ? 'You' : giver }, 'passed a skill to', { name: youGot ? 'you' : receiver }], item.at),
         h('h2', { class: 'line', text: item.skill ? item.skill.title : 'a skill' }),
         h('p', { class: 'note', text: 'you were in the same conversation, both wearing tacit' })));
+  }
+  if (item.type === 'heard') {
+    const b = item.body || {};
+    const verb = HEARD_WORDS[item.kind] || 'said something';
+    const ready = ['title', 'verdict', 'what', 'thing', 'question', 'idea'].some((k) => b[k]);
+    const line = ready ? (b.title || b.what || b.thing || b.question || b.idea || item.title) : (KIND_WORDS[item.kind] || item.kind);
+    return story('You', [{ name: 'You' }, `${verb} · heard`], item.at,
+      h('h2', { class: 'line', text: line }),
+      ready && b.verdict && b.verdict !== line ? h('p', { class: 'note', text: b.verdict }) : null,
+      ready ? because(b.reason || b.why) : h('p', { class: 'note', text: 'The details aren\'t filled in yet; they will be as soon as the band\'s AI step is available.' }),
+      h('p', { class: 'acts' }, h('a', { class: 'link', href: '#/moments', text: 'what was said' }),
+        h('span', { class: 'note', text: 'only you see this' })));
   }
   if (item.type === 'connected') {
     const who = nameOf(item.person);

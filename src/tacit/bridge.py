@@ -54,6 +54,7 @@ LEVEL_KEEP_S = 600
 MIC_LEVEL_S = 0.1
 MAX_KEYTERMS = 20
 HANDSHAKE_TAP_S = 2.0   # a double-tap this close to a handshake is part of it
+KEEP_ONCE_S = 60.0      # one "keep that" per minute
 GESTURE_NOT_HANDSHAKE_S = 3.0   # a "handshake" this soon after a mute gesture was that gesture
 
 
@@ -242,6 +243,7 @@ class Bridge:
         self.shake = handshake.ShakeDetector()                 # "I'm shaking a hand"
         self.last_shake = float("-inf")
         self.last_gesture = float("-inf")
+        self.last_kept = float("-inf")
         self.gesturing: list[motion.Session] = []
         self.speech_windows: deque[float] = deque(maxlen=2000)  # when final speech arrived
         self.tasks: set[asyncio.Task] = set()
@@ -442,6 +444,9 @@ class Bridge:
         t = self.clock()
         if t - self.last_shake <= HANDSHAKE_TAP_S:
             return   # part of a handshake, not "keep that"
+        if t - self.last_kept < KEEP_ONCE_S:
+            return   # this minute is already kept
+        self.last_kept = t
         self.pending_moments.append({"kind": "kept", "started_at": iso(t - 60),
                                      "ended_at": iso(t), "confidence": 1.0, "_at": t})
 

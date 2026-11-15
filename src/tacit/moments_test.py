@@ -214,3 +214,48 @@ def test_moment_detail(tmp_path):
     store.delete_segments_for_user(maya_id)
     d = maya.get(f"/api/moments/{m.id}").json()
     assert d["lines"] == [] and d["lines_expected"] is True and d["moment"]["title"]
+
+
+class FlakyLLM(FakeLLM):
+    """Out of credit first, then fine."""
+
+    def __init__(self, answers):
+        super().__init__(answers)
+        self.down = True
+
+    async def extract(self, text, *, name, schema, instructions):
+        self.calls.append((name, text))
+        if self.down:
+            raise RuntimeError("openai status 429")
+        return dict(self.answers.get(name, {}))
+
+
+async def test_failed_extraction_is_retried_and_becomes_a_skill(tmp_path):
+    store, s, maya, ana, maya_id, ana_id = two_bands(tmp_path)
+    dev = store.device_for_user(maya_id)
+    llm = FlakyLLM({"advice": {**ADVICE, "giver": "other"}})   # the model's giver is ignored
+    pipe = sc.Scenarios(store, s, jev=FakeJev({"advice": 0.9}, giver="wearer"), llm=llm)
+    pipe.hooks.append(MomentHooks(store, s, None))
+    talk(store, dev, CONVO)
+    out = await pipe.maybe_run(dev)
+    given = next(m for m in out if m.kind == "advice_given")
+    assert given.body["title"] is None and not given.skill_id        # empty: the model was down
+    feed = maya.get("/api/feed").json()
+    heard = [i for i in feed if i["type"] == "heard"]
+    assert heard and heard[0]["kind"] == "advice_given" and heard[0]["only_you"] is True
+    assert not [i for i in ana.get("/api/feed").json() if i["type"] == "heard"]
+    # still down: nothing changes, and it waits before the next try
+    assert await pipe.retry_extraction(dev) == 0
+    llm.down = False
+    assert await pipe.retry_extraction(dev) == 0                       # waiting 5 minutes
+    pipe._retry_at.clear()
+    assert await pipe.retry_extraction(dev) >= 1
+    fixed = store.get_moment(given.id)
+    assert fixed.body["title"] == ADVICE["title"] and fixed.body["giver"] == "wearer"
+    skill = store.get_skill(fixed.skill_id)
+    assert skill.status == "draft" and skill.source == "conversation"
+    line = next(i for i in maya.get("/api/feed").json() if i["id"] == f"heard:{given.id}")
+    assert line["body"]["title"] == ADVICE["title"]
+    # dismissed moments leave the feed
+    maya.patch(f"/api/moments/{given.id}", json={"status": "dismissed"})
+    assert not [i for i in maya.get("/api/feed").json() if i["id"] == f"heard:{given.id}"]

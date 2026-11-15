@@ -222,3 +222,18 @@ def test_handshakes_connect_two_people(tmp_path):
     body = {"moments": [{"kind": "handshake", "started_at": t.isoformat(),
                          "ended_at": t.isoformat()}]}
     assert bridge2.post("/api/bridge/moments", json=body).json() == {"stored": 0}
+
+
+def test_a_minute_is_kept_once(tmp_path):
+    from tacit.domain import now
+
+    store, app, pwa, bridge, uid, token = paired(tmp_path)
+    t = now()
+
+    def keep(at):
+        return bridge.post("/api/bridge/moments", json={"moments": [
+            {"kind": "kept", "started_at": at.isoformat(), "ended_at": at.isoformat()}]}).json()
+
+    assert keep(t) == {"stored": 1}
+    assert keep(t + timedelta(seconds=20)) == {"stored": 0}       # arm moves read as taps
+    assert keep(t + timedelta(seconds=90)) == {"stored": 1}

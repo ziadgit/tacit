@@ -250,7 +250,7 @@ class MomentOut(BaseModel):
 
 
 class FeedItemOut(BaseModel):
-    type: Literal["skill", "pass", "creative", "post", "picked_up", "connected"]
+    type: Literal["skill", "pass", "creative", "post", "picked_up", "connected", "heard"]
     id: str
     at: datetime
     person: dict[str, Any] | None = None       # {id, first_name}

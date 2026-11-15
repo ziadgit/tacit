@@ -488,3 +488,13 @@ async def test_a_mute_gesture_is_never_a_handshake(tmp_path):
     assert r.bridge.muted
     assert "handshake" not in [m["kind"] for batch in r.server.named("moments") for m in batch]
     await r.close()
+
+
+async def test_double_taps_keep_a_minute_once(tmp_path):
+    r = await rig(tmp_path)
+    for _ in range(3):
+        r.sim.tap("double-tap")
+        await r.advance(5000)
+    await r.bridge.tick()
+    assert [m["kind"] for batch in r.server.named("moments") for m in batch] == ["kept"]
+    await r.close()

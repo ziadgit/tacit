@@ -27,6 +27,9 @@ log = logging.getLogger("tacit.network")
 FEED_MAX = 50
 CREATIVE_MIN_S = 5 * 60
 PASS_NEW = timedelta(hours=24)
+HEARD_DAYS = timedelta(days=7)
+HEARD_KINDS = ("advice_given", "explanation", "lesson", "demonstration", "idea",
+               "recommendation", "decision", "commitment", "question")
 # Fields of a shared moment's body that never go to the feed: words that might be a bystander's.
 PRIVATE_BODY = ("quote", "giver", "who")
 
@@ -203,6 +206,14 @@ def feed_items(store: Store, viewer: User) -> list[FeedItemOut]:
                                  lit=t - p.created_at < PASS_NEW))
 
     items.extend(picked_up(store, viewer))
+    # the wearer's own moments, private to them ("you gave advice · heard today")
+    heard_since = t - HEARD_DAYS
+    for m in store.moments_for(viewer.id, since=heard_since):
+        if m.kind in HEARD_KINDS and m.status != "dismissed":
+            items.append(FeedItemOut(type="heard", id=f"heard:{m.id}", at=m.ended_at, kind=m.kind,
+                                     title=m.title, body={k: v for k, v in m.body.items()
+                                                          if k != "matches"},
+                                     only_you=True))
     for m in store.moments_for(viewer.id, kind="handshake"):
         pid = m.body.get("person_id")
         other = user(pid) if pid and m.status != "dismissed" else None

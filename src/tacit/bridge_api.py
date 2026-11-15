@@ -34,6 +34,7 @@ router = APIRouter()
 BRIDGE_PER_MINUTE = 240         # polls every 2 s + state every 10 s + uploads, with room
 MAX_REWIND_S = 3600
 KEEP_WINDOW_S = 60              # double-tap "keep that" marks the last minute
+KEEP_ONCE = timedelta(seconds=60)
 MOTION_KINDS = (*CREATIVE_KINDS, "typing", "presenting", "walking_meeting", "demonstration")
 BRIDGE_MOMENT_KINDS = (*MOTION_KINDS, "kept", "handshake")
 HANDSHAKE_WITHIN = timedelta(seconds=2)   # two shakes this close, on two people's bands, met
@@ -307,6 +308,10 @@ def bridge_moments(body: MomentsIn, request: Request, background: BackgroundTask
     stored = 0
     for m in body.moments:
         if m.kind not in BRIDGE_MOMENT_KINDS or m.kind in off:
+            continue
+        if m.kind == "kept" and any(  # a minute is kept once: the band reads arm moves as taps
+                abs(k.ended_at - m.ended_at) < KEEP_ONCE
+                for k in store.moments_for(dev.user_id, since=m.ended_at - KEEP_ONCE, kind="kept")):
             continue
         ended = max(m.ended_at, m.started_at)
         started = m.started_at

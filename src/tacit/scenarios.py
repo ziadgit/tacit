@@ -31,6 +31,19 @@ from .store import Store
 log = logging.getLogger("tacit.scenarios")
 
 WINDOW_MAX = timedelta(minutes=3)
+RETRY_AFTER = timedelta(minutes=5)
+RETRY_PER_TICK = 3
+# moment kind → the extraction schema that fills it in
+EXTRACT_KIND = {"advice_given": "advice", "advice_received": "advice", "explanation": "explanation",
+                "lesson": "lesson", "demonstration": "demonstration", "idea": "idea",
+                "recommendation": "recommendation", "decision": "decision",
+                "commitment": "commitment", "question": "question"}
+CONTENT_KEYS = ("title", "verdict", "what", "thing", "question", "idea")
+
+
+def filled(body: dict) -> bool:
+    """Did extraction fill this moment in?"""
+    return any(body.get(k) for k in CONTENT_KEYS)
 OVERLAP = timedelta(seconds=30)
 NEW_SPEECH = timedelta(seconds=90)
 SILENCE = timedelta(seconds=20)
@@ -185,6 +198,7 @@ class Scenarios:
         self.llm = llm
         self.clock = clock
         self.hooks: list[MomentHook] = []   # moments → skills and passes (§13.5)
+        self._retry_at: dict[str, datetime] = {}
         self._locks: dict[str, asyncio.Lock] = {}
 
     def _lock(self, dev: BridgeDevice) -> asyncio.Lock:
@@ -198,6 +212,38 @@ class Scenarios:
     async def tick(self, dev: BridgeDevice) -> None:
         self.store.delete_segments_before(self.clock() - RETENTION)
         await self.maybe_run(dev)
+        await self.retry_extraction(dev)
+
+    async def retry_extraction(self, dev: BridgeDevice, limit: int = RETRY_PER_TICK) -> int:
+        """Fill in moments whose extraction failed (the model was down, out of credit, ...),
+        while their words are still kept (24 h). Then skills and passes follow as usual.
+        After a failure, wait RETRY_AFTER before trying again."""
+        if self.llm is None or self.clock() < self._retry_at.get(dev.user_id, self.clock()):
+            return 0
+        done = 0
+        for m in self.store.moments_for(dev.user_id, since=self.clock() - RETENTION):
+            if done >= limit:
+                break
+            if m.kind not in EXTRACT_KIND or m.status == "dismissed" or filled(m.body):
+                continue
+            segs = [x for sid in m.segment_ids if (x := self.store.get("segments", sid))]
+            if not segs:
+                continue
+            segs.sort(key=lambda x: x.started_at)
+            ex = await self.extract(EXTRACT_KIND[m.kind], window_lines(segs, wearer_speaker(segs)))
+            if not ex:
+                self._retry_at[dev.user_id] = self.clock() + RETRY_AFTER
+                return done
+            ex = {**ex, "giver": m.body.get("giver") or ex.get("giver")}
+            built = self._build(m.user_id, m.kind, ex, m.confidence, m.started_at, m.ended_at,
+                                m.segment_ids, segs)
+            m = self.store.update_moment(m.id, title=built.title, body=built.body)
+            for hook in self.hooks:
+                await hook(dev, m, ex)
+            done += 1
+        if done:
+            log.info("re-extracted %d moments", done)
+        return done
 
     async def on_kept(self, dev: BridgeDevice, kept: Moment) -> None:
         async with self._lock(dev):
@@ -338,6 +384,10 @@ class Scenarios:
                     "giver": ex.get("giver")}
             # a bystander's exact words are never kept (§13.5, §15)
             body["quote"] = None if kind == "advice_received" else quote_ok(ex.get("quote"), segs)
+            if kind == "advice_given":
+                body["giver"] = "wearer"     # the band classed it as the wearer's own advice
+            elif kind == "advice_received":
+                body["giver"] = "other"
             if kind == "demonstration":
                 body["ranked_first"] = True
             title = body["title"] or kind.replace("_", " ")
