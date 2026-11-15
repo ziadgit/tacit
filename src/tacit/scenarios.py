@@ -119,7 +119,10 @@ INSTRUCTIONS = (
     "You read a transcript window from a wristband. Lines start with a speaker label; one may be "
     "marked (likely wearer). Fill in the fields only from what was said. The title is a short "
     "imperative phrase. `quote` must be words copied exactly from one line, or null. Never "
-    "invent anything; never include names of people who are not speaking.")
+    "invent anything; never include names of people who are not speaking. Write `verdict` "
+    "as the action itself, in the imperative (\"Lead with the number, then the story.\"), "
+    "never as a description like \"Advice given: ...\". Never write a speaker label such as "
+    "S0 in any field: for a person, write \"you\" for the likely wearer, else null.")
 
 
 # ---- pure helpers -----------------------------------------------------------------------------
