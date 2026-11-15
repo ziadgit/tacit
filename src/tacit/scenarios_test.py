@@ -79,13 +79,20 @@ def test_quote_check_and_jaccard():
 def test_due_rules(tmp_path):
     store, user, dev, pipe = world(tmp_path)
     assert pipe.due(dev) is None
-    seg(store, dev, 30, 5, 0, "short and recent")         # 25 s of silence after it
-    assert [s.text for s in pipe.due(dev)] == ["short and recent"]
+    seg(store, dev, 30, 5, 0, "short and recent")          # 5 s of speech, 25 s of quiet
+    assert pipe.due(dev) is None                            # not enough to talk about yet
     store2, user2, dev2, pipe2 = world(tmp_path / "b")
-    seg(store2, dev2, 5, 3, 0, "still talking")
-    assert pipe2.due(dev2) is None                        # not 90 s, not 20 s of silence
-    seg(store2, dev2, 120, 3, 0, "long ago")
-    assert pipe2.due(dev2) is not None                    # 90 s of new speech
+    seg(store2, dev2, 50, 3, 0, "short, long ago")          # 47 s of quiet: run anyway
+    assert [s.text for s in pipe2.due(dev2)] == ["short, long ago"]
+    store3, user3, dev3, pipe3 = world(tmp_path / "c")
+    seg(store3, dev3, 45, 8, 0, "one")
+    seg(store3, dev3, 35, 9, 1, "two")                      # 17 s of speech, then 26 s of quiet
+    assert [s.text for s in pipe3.due(dev3)] == ["one", "two"]
+    store4, user4, dev4, pipe4 = world(tmp_path / "d")
+    seg(store4, dev4, 5, 3, 0, "still talking")
+    assert pipe4.due(dev4) is None                          # not 90 s, no pause
+    seg(store4, dev4, 120, 3, 0, "long ago")
+    assert pipe4.due(dev4) is not None                      # 90 s of new speech
 
 
 async def test_no_jev_no_detections(tmp_path):
@@ -191,6 +198,8 @@ async def test_window_cap(tmp_path):
     seg(store, dev, 60, 5, 0, "two")
     assert await pipe.maybe_run(dev) == []                # over the cap
     assert len(jev.calls) == 1
+    # ...but the speech is kept for a later window, not dropped
+    assert [s.text for s in store.segments(dev.id) if not s.windowed] == ["two"]
 
 
 async def test_kept_is_forced_and_records_what_was_found(tmp_path):
@@ -230,11 +239,11 @@ def test_bridge_upload_runs_the_pipeline(tmp_path):
     token = pwa.post("/api/band/pair", json={"band": 16}).json()["token"]
     bridge = TestClient(app, base_url="https://localhost",
                         headers={"authorization": f"Bearer {token}"})
-    t = now() - timedelta(seconds=40)
+    t = now() - timedelta(seconds=60)
     bridge.post("/api/bridge/segments", json={"segments": [
         {"started_at": t.isoformat(), "ended_at": (t + timedelta(seconds=3)).isoformat(),
          "speaker": 1, "text": "please don't keep any of this"}]})
-    assert jev.calls                                   # ran after the upload (20 s of silence)
+    assert jev.calls                                   # ran after the upload (45 s of silence)
     assert bridge.get("/api/bridge/commands").json() == {"muted": True, "changed": True}
 
 

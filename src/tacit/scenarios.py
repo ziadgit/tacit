@@ -47,6 +47,8 @@ def filled(body: dict) -> bool:
 OVERLAP = timedelta(seconds=30)
 NEW_SPEECH = timedelta(seconds=90)
 SILENCE = timedelta(seconds=20)
+MIN_SPEECH = timedelta(seconds=15)     # a pause ends a window only after this much speech
+LONG_SILENCE = timedelta(seconds=45)   # ...or after this long a pause, whatever came before
 WEARER_DB = 6.0
 CONVERSATION_GAP = timedelta(minutes=2)
 DEDUP_JACCARD = 0.6
@@ -263,14 +265,19 @@ class Scenarios:
             return await self.run_window(dev, segs) if segs else []
 
     def due(self, dev: BridgeDevice) -> list[Segment] | None:
-        """The window to run now, or None: 90 s of new speech, or 20 s of silence after some."""
+        """The window to run now, or None: 90 s of new speech, 20 s of silence after at least
+        15 s of it, or 45 s of silence after any."""
         all_segs = self.store.segments(dev.id)
         new = [s for s in all_segs if not s.windowed]
         if not new:
             return None
         first = new[0].started_at
         span = new[-1].ended_at - first
-        if span < NEW_SPEECH and self.clock() - new[-1].ended_at < SILENCE:
+        speech = sum(((x.ended_at - x.started_at) for x in new), timedelta())
+        quiet = self.clock() - new[-1].ended_at
+        # 90 s of new speech; or a pause after enough to talk about; or a long pause anyway
+        enough = speech >= MIN_SPEECH or span >= MIN_SPEECH
+        if span < NEW_SPEECH and not (quiet >= SILENCE and enough) and quiet < LONG_SILENCE:
             return None
         window = [s for s in new if s.ended_at - first <= WINDOW_MAX] or new[:1]
         overlap = [s for s in all_segs if s.windowed and first - OVERLAP <= s.ended_at <= first]
@@ -305,13 +312,13 @@ class Scenarios:
         user = self.store.get_user(dev.user_id)
         if user is None:
             return []
+        if not forced and not self.store.allow(user.id, "window", self.settings.windows_per_hour,
+                                               per=timedelta(hours=1)):
+            log.info("window cap reached: the speech waits for the next window")
+            return []                      # nothing marked: these lines go in a later window
         for s in segs:
             if not s.windowed:
                 self.store.update("segments", s.id, windowed=True)
-        if not forced and not self.store.allow(user.id, "window", self.settings.windows_per_hour,
-                                               per=timedelta(hours=1)):
-            log.info("window cap reached")
-            return []
         off = set(user.kinds_off)
         out: list[Moment] = []
         start, end = segs[0].started_at, max(s.ended_at for s in segs)

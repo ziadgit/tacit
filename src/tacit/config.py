@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     claude_model: str = "claude-opus-5-5"
     claude_effort: str = "medium"
     scenario_threshold: float = 0.6
-    windows_per_hour: int = 40
+    windows_per_hour: int = 120
     mute_rewind_s: int = 15
     bridge_buffer_mb: int = 500
 
