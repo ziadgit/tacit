@@ -188,6 +188,11 @@ def feed_items(store: Store, viewer: User) -> list[FeedItemOut]:
                                          person=who(expert), kind=m.kind, minutes=minutes))
             elif m.kind in POSTABLE_KINDS and m.status == "shared":
                 body = {k: v for k, v in m.body.items() if k not in PRIVATE_BODY}
+                if m.kind == "advice_received":
+                    body = {k: body.get(k) for k in ("title", "verdict", "reason")}
+                    giver = matched_giver(store, m)
+                    if giver:
+                        body["from"] = giver
                 items.append(FeedItemOut(type="post", id=f"post:{m.id}", at=m.ended_at,
                                          person=who(expert), kind=m.kind, title=m.title,
                                          body=body))
@@ -212,10 +217,13 @@ def feed_items(store: Store, viewer: User) -> list[FeedItemOut]:
     heard_since = t - HEARD_DAYS
     for m in store.moments_for(viewer.id, since=heard_since):
         if m.kind in HEARD_KINDS and m.status != "dismissed":
+            skill = store.get_skill(m.skill_id) if m.skill_id else None
+            body = {k: v for k, v in m.body.items() if k != "matches"}
+            body["status"] = m.status
+            if skill is not None and skill.status != "removed":
+                body["skill"] = {"id": skill.id, "status": skill.status}
             items.append(FeedItemOut(type="heard", id=f"heard:{m.id}", at=m.ended_at, kind=m.kind,
-                                     title=m.title, body={k: v for k, v in m.body.items()
-                                                          if k != "matches"},
-                                     only_you=True))
+                                     title=m.title, body=body, only_you=True))
     # minutes the wearer kept (double-tap or "keep"), with their words while they're kept (24 h)
     for m in store.moments_for(viewer.id, since=heard_since, kind="kept"):
         if m.status == "dismissed" or not m.segment_ids:
@@ -242,6 +250,17 @@ def feed_items(store: Store, viewer: User) -> list[FeedItemOut]:
     return items[:FEED_MAX]
 
 
+def matched_giver(store: Store, m) -> str | None:
+    """The first name of a tacit user who gave this received advice (a pass, once published)."""
+    for p in store.passes_for(m.user_id):
+        if p.receiver_moment_id == m.id:
+            s = store.get_skill(p.skill_id)
+            g = store.get_user(p.giver_id)
+            if s and s.status == "published" and g:
+                return first_name(g.name)
+    return None
+
+
 def picked_up(store: Store, viewer: User) -> list[FeedItemOut]:
     """The viewer's own advice_received moments. Credited by name only through a pass."""
     by_moment = {p.receiver_moment_id: p for p in store.passes_for(viewer.id)
@@ -259,6 +278,7 @@ def picked_up(store: Store, viewer: User) -> list[FeedItemOut]:
             if g:
                 giver = who(g)
                 body["quote"] = s.quote   # the giver's own words, from their own skill
+        body["status"] = m.status
         out.append(FeedItemOut(type="picked_up", id=f"picked_up:{m.id}", at=m.ended_at,
                                title=m.title or body.get("title"), body=body, giver=giver,
                                only_you=True))

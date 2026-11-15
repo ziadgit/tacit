@@ -259,3 +259,51 @@ async def test_failed_extraction_is_retried_and_becomes_a_skill(tmp_path):
     # dismissed moments leave the feed
     maya.patch(f"/api/moments/{given.id}", json={"status": "dismissed"})
     assert not [i for i in maya.get("/api/feed").json() if i["id"] == f"heard:{given.id}"]
+
+
+def test_ana_shares_advice_she_picked_up(tmp_path):
+    from tacit.domain import Pass, Skill
+
+    store, s, maya, ana, maya_id, ana_id = two_bands(tmp_path)
+    maya.post(f"/api/follow/{ana_id}")
+    t = now()
+    got = store.add_moment(Moment(user_id=ana_id, kind="advice_received", started_at=t, ended_at=t,
+                                  title="Test it yourself first",
+                                  body={"title": "Test it yourself first",
+                                        "verdict": "Try it alone.", "reason": "you see the gaps",
+                                        "quote": "a stranger's words", "giver": "other",
+                                        "steps": ["one"]}))
+    # private until shared
+    assert not [i for i in maya.get("/api/feed").json() if i["type"] == "post"]
+    mine = next(i for i in ana.get("/api/feed").json() if i["type"] == "picked_up")
+    assert mine["body"]["status"] == "new"
+    assert ana.patch(f"/api/moments/{got.id}", json={"status": "shared"}).status_code == 200
+    post = next(i for i in maya.get("/api/feed").json() if i["type"] == "post")
+    assert post["kind"] == "advice_received" and post["person"]["first_name"] == "Ana"
+    assert post["body"] == {"title": "Test it yourself first", "verdict": "Try it alone.",
+                            "reason": "you see the gaps"}          # no quote, giver or steps
+    # a matched giver (a published pass) gets the credit
+    sk = store.add_skill(Skill(owner_id=maya_id, title="Test it yourself first", verdict="v",
+                               reason="r", status="published"))
+    store.add_pass(Pass(giver_id=maya_id, receiver_id=ana_id, skill_id=sk.id,
+                        receiver_moment_id=got.id))
+    post = next(i for i in maya.get("/api/feed").json() if i["type"] == "post")
+    assert post["body"]["from"] == "Maya"
+
+
+def test_share_a_skill_from_the_feed(tmp_path):
+    from tacit.domain import Skill
+
+    store, s, maya, ana, maya_id, ana_id = two_bands(tmp_path)
+    maya.post(f"/api/follow/{ana_id}")
+    t = now()
+    sk = store.add_skill(Skill(owner_id=ana_id, title="Say the final task first", verdict="v",
+                               reason="r", source="conversation"))
+    m = store.add_moment(Moment(user_id=ana_id, kind="advice_given", started_at=t, ended_at=t,
+                                title=sk.title, body={"title": sk.title, "verdict": "v",
+                                                      "reason": "r"}, skill_id=sk.id))
+    line = next(i for i in ana.get("/api/feed").json() if i["id"] == f"heard:{m.id}")
+    assert line["body"]["skill"] == {"id": sk.id, "status": "draft"}
+    ana.patch(f"/api/skills/{sk.id}", json={"status": "published"})
+    assert [i for i in maya.get("/api/feed").json()
+            if i["type"] == "skill" and i["skill"]["id"] == sk.id]

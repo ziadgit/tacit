@@ -185,7 +185,8 @@ def test_band_screens_and_listening_pill():
                   "/api/band/pair", "/api/band/mute", "share creative sessions"):
         assert words in app, words
     # moments: keep / dismiss / share only for recommendation, lesson, idea
-    assert "new Set(['recommendation', 'lesson', 'idea'])" in app
+    assert "new Set(['recommendation', 'lesson', 'idea', 'advice_received'])" in app
+    assert "'share to your feed'" in app and "'share as a skill'" in app
     assert "'the draft skill it made'" in app and "text: 'what was said'" in app
     assert "transcripts are kept for 24 hours" in app
     # the PWA's own CSS never draws the listening blue itself

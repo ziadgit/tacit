@@ -20,7 +20,10 @@ MomentKind = Literal[
 ]
 MOMENT_KINDS: tuple[str, ...] = MomentKind.__args__  # type: ignore[attr-defined]
 CREATIVE_KINDS = ("writing", "drawing", "whiteboard", "making")
-POSTABLE_KINDS = ("recommendation", "lesson", "idea")
+# Moments the wearer may share as a post. A shared "advice_received" shows what to do and why in
+# tacit's words, never the giver's own words or name (they may not be on tacit); a matched
+# giver (a pass) is credited by first name.
+POSTABLE_KINDS = ("recommendation", "lesson", "idea", "advice_received")
 
 
 def new_id() -> str:

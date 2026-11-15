@@ -525,7 +525,7 @@ export function creativeLine(item) {
   return `${who} ${MADE[item.kind] || 'made something'} for ${m} minute${m === 1 ? '' : 's'}`;
 }
 
-const POST_WORDS = { recommendation: 'recommends', lesson: 'learned', idea: 'had an idea' };
+const POST_WORDS = { recommendation: 'recommends', lesson: 'learned', idea: 'had an idea', advice_received: 'picked up advice' };
 const HEARD_WORDS = { advice_given: 'gave advice', explanation: 'explained how', lesson: 'learned',
   demonstration: 'showed how', idea: 'had an idea', recommendation: 'recommended', decision: 'decided',
   commitment: 'committed to something', question: 'asked' };
@@ -604,7 +604,8 @@ export function feedItem(item) {
         await patch(`/api/moments/${encodeURIComponent(momentId)}`, { status: 'dismissed' });
         btn.closest('.story').remove();
       }) }),
-      h('span', { class: 'note', text: 'only you see this' }));
+      shareButton('advice_received', momentId, b.status, null),
+      h('span', { class: 'note', text: b.status === 'shared' ? 'shared without their words or name' : 'only you see this' }));
     return story(giver, [{ name: giver }, 'gave you advice · heard'], item.at,
       h('h2', { class: 'line', text: item.title || b.title || b.verdict || '' }),
       b.verdict && b.verdict !== item.title ? h('p', { class: 'note', text: b.verdict }) : null,
@@ -651,6 +652,7 @@ export function feedItem(item) {
       ready && b.verdict && b.verdict !== line ? h('p', { class: 'note', text: b.verdict }) : null,
       ready ? because(b.reason || b.why) : h('p', { class: 'note', text: 'The details aren\'t filled in yet; they will be as soon as the band\'s AI step is available.' }),
       h('p', { class: 'acts' }, h('a', { class: 'link', href: '#/moments', text: 'what was said' }),
+        ready ? shareButton(item.kind, String(item.id).replace(/^heard:/, ''), b.status, b.skill) : null,
         h('span', { class: 'note', text: 'only you see this' })));
   }
   if (item.type === 'connected') {
@@ -668,7 +670,10 @@ export function feedItem(item) {
   if (item.type === 'post') {
     const b = item.body || {};
     const who = nameOf(item.person);
-    return story(who, [{ name: who }, POST_WORDS[item.kind] || 'shared'], item.at,
+    const heading = item.kind === 'advice_received'
+      ? [{ name: who }, b.from ? `picked up advice from ${b.from}` : 'picked up advice']
+      : [{ name: who }, POST_WORDS[item.kind] || 'shared'];
+    return story(who, heading, item.at,
       h('h2', { class: 'line', text: item.title || b.thing || b.idea || '' }),
       because(b.why || b.reason), b.verdict ? h('p', { class: 'note', text: b.verdict }) : null);
   }
@@ -839,7 +844,25 @@ export const KIND_WORDS = {
   making: 'making something', walking_meeting: 'a walking meeting', demonstration: 'a demonstration',
   kept: 'a minute you kept', handshake: 'a handshake',
 };
-const SHAREABLE = new Set(['recommendation', 'lesson', 'idea']);
+const SHAREABLE = new Set(['recommendation', 'lesson', 'idea', 'advice_received']);
+const SKILL_KINDS = new Set(['advice_given', 'explanation', 'lesson', 'demonstration']);
+
+// "share to your feed": a post for shareable kinds, or publishing the draft skill a moment made
+function shareButton(kind, momentId, status, skill) {
+  if (skill && SKILL_KINDS.has(kind)) {
+    if (skill.status === 'published') return h('span', { class: 'note', text: 'shared as a skill' });
+    return h('button', { type: 'button', text: 'share as a skill', onclick: (ev) => act(ev.currentTarget, async (btn) => {
+      await patch(`/api/skills/${encodeURIComponent(skill.id)}`, { status: 'published' });
+      btn.replaceWith(h('span', { class: 'note', text: 'shared as a skill: your followers see it' }));
+    }) });
+  }
+  if (!SHAREABLE.has(kind)) return null;
+  if (status === 'shared') return h('span', { class: 'note', text: 'shared with your followers' });
+  return h('button', { type: 'button', text: 'share to your feed', onclick: (ev) => act(ev.currentTarget, async (btn) => {
+    await patch(`/api/moments/${encodeURIComponent(momentId)}`, { status: 'shared' });
+    btn.replaceWith(h('span', { class: 'note', text: 'shared with your followers' }));
+  }) });
+}
 
 function clock(iso) {
   const d = new Date(iso);
@@ -952,7 +975,13 @@ function momentCard(m) {
     if (m.status !== 'kept') acts.append(h('button', { type: 'button', class: 'tc-btn quiet', text: 'keep', onclick: set('kept') }));
     if (m.status !== 'dismissed') acts.append(h('button', { type: 'button', class: 'tc-btn quiet', text: 'dismiss', onclick: set('dismissed') }));
     if (SHAREABLE.has(m.kind) && m.status !== 'shared') {
-      acts.append(h('button', { type: 'button', class: 'tc-btn', text: 'share as a post', onclick: set('shared') }));
+      acts.append(h('button', { type: 'button', class: 'tc-btn', text: 'share to your feed', onclick: set('shared') }));
+    }
+    if (m.skill_id && SKILL_KINDS.has(m.kind)) {
+      acts.append(h('button', { type: 'button', class: 'tc-btn', text: 'share as a skill', onclick: (ev) => act(ev.currentTarget, async (btn) => {
+        await patch(`/api/skills/${encodeURIComponent(m.skill_id)}`, { status: 'published' });
+        btn.replaceWith(h('span', { class: 'only-you', text: 'shared as a skill' }));
+      }) }));
     }
     acts.append(toggle);
     const facts = [clock(m.started_at), duration(m.started_at, m.ended_at), SOURCE_WORDS[m.source] || m.source, sureWord(m.confidence)];
