@@ -74,7 +74,7 @@ def test_vendor_is_a_copy_with_source_comment():
 
 def test_sw_never_caches_api():
     sw = (PWA / "sw.js").read_text()
-    assert "tacit-shell-v1" in sw
+    assert re.search(r"tacit-shell-v\d+", sw)
     assert "'/api/'" in sw and "isApi(url)" in sw
     shell = re.search(r"const SHELL = \[(.*?)\];", sw, re.S).group(1)
     assert "/api/" not in shell
@@ -118,17 +118,24 @@ def test_p1_screens_people_feed():
     html = (PWA / "index.html").read_text()
     for screen in ("people", "person", "feed"):
         assert f'data-screen="{screen}"' in html
-    for nav in ("#/feed", "#/people", "#/skills", "#/me"):
+    # the shell from the team's design: feed · network · profile · + connect
+    for nav in ("#/feed", "#/people", "#/me", "#/connect"):
         assert f'href="{nav}"' in html
+    assert ">network</a>" in html and ">profile</a>" in html and ">+ connect</a>" in html
     app = own_js()["app.js"]
     assert "unlock followers-only skills for" in app
     assert "/checkout`" in app and "location.assign(url)" in app
     assert "only you see this" in app
     assert "'sketched'" in app
+    # the feed is lines with tabs, and skills / moments / the call are reached from profile
+    assert "class: 'story'" in app and "today in your network" in app
+    assert "everything: null" in app and "advice: new Set" in app
+    for link in ("'#/skills'", "'#/moments'", "'#/call'"):
+        assert link in app
     assert "T.ring(" in app  # PersonRings come from the design system's ring()
     css = (PWA / "style.css").read_text()
     assert "--t-lit" in css  # orange only on a new pass
-    assert css.count("--t-lit") == 2 and ".pass.lit" in css
+    assert css.count("--t-lit") == 3 and ".story.pass.lit" in css
 
 
 def test_reduced_motion_and_offline_banner():
@@ -161,7 +168,7 @@ def test_portrait_in_the_pwa():
 
 def test_band_screens_and_listening_pill():
     html = (PWA / "index.html").read_text()
-    assert 'data-screen="moments"' in html and 'href="#/moments"' in html
+    assert 'data-screen="moments"' in html and 'data-screen="connect"' in html
     assert 'id="pill"' in html and "hidden" in html.split('id="pill"')[1].split(">")[0]
     app = own_js()["app.js"]
     # the pill is blue (tc-pill) only while listening; muted is cream; polled every 5 s

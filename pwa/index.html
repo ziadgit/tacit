@@ -21,7 +21,14 @@
 <body>
 <div class="tc-ground shell" id="shell">
   <header class="bar tc-above">
-    <a class="mark" href="#/skills" aria-label="tacit home"><span class="tc-word">tac<span class="bi">i</span>t</span></a>
+    <a class="mark" href="#/feed" aria-label="tacit home"><span class="tc-word">tac<span class="bi">i</span>t</span></a>
+    <!-- the shell from the team's design (screens/feed): feed · network · profile · + connect -->
+    <nav id="nav-top" class="tabs-top" hidden aria-label="main">
+      <a href="#/feed" data-nav="feed">feed</a>
+      <a href="#/people" data-nav="people">network</a>
+      <a href="#/me" data-nav="me">profile</a>
+      <a class="connect" href="#/connect" data-nav="connect">+ connect</a>
+    </nav>
     <span id="pill" class="listen-pill" hidden aria-live="polite"></span>
   </header>
   <p id="offline" class="banner tc-above" hidden role="status">you're offline. what you see may be out of date.</p>
@@ -35,14 +42,14 @@
     <section data-screen="person" hidden></section>
     <section data-screen="feed" hidden></section>
     <section data-screen="moments" hidden></section>
+    <section data-screen="connect" hidden></section>
     <section data-screen="me" hidden></section>
   </main>
-  <nav id="nav" class="nav tc-above" hidden aria-label="screens">
+  <nav id="nav" class="nav tc-above" hidden aria-label="main">
     <a href="#/feed" data-nav="feed">feed</a>
-    <a href="#/people" data-nav="people">people</a>
-    <a href="#/skills" data-nav="skills">skills</a>
-    <a href="#/moments" data-nav="moments">moments</a>
-    <a href="#/me" data-nav="me">me</a>
+    <a href="#/people" data-nav="people">network</a>
+    <a class="connect" href="#/connect" data-nav="connect">+ connect</a>
+    <a href="#/me" data-nav="me">profile</a>
   </nav>
 </div>
 <noscript><p class="banner">tacit needs JavaScript.</p></noscript>

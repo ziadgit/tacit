@@ -33,6 +33,12 @@ export function h(tag, props = {}, ...kids) {
 
 const $ = (sel, root = document) => root.querySelector(sel);
 
+// replaceChildren() would print a null part as the text "null": skip empty parts.
+function fill(node, ...kids) {
+  node.replaceChildren(...kids.flat().filter((k) => k !== null && k !== undefined && k !== false));
+  return node;
+}
+
 function title(text) {
   return h('h1', { class: 'tc-title screen-title', text });
 }
@@ -57,7 +63,7 @@ function errorText(e) {
 async function act(btn, fn) {
   if (btn) btn.disabled = true;
   try {
-    return await fn();
+    return await fn(btn); // the button is passed in: ev.currentTarget is gone after an await
   } catch (e) {
     if (e instanceof ApiError && e.status === 401) { state.me = null; go('#/start'); }
     toast(errorText(e));
@@ -93,10 +99,10 @@ function twoStep(label, sure, onYes, cls = 'tc-btn quiet') {
   const wrap = h('div', { class: 'two-step' });
   const first = h('button', { type: 'button', class: cls, text: label });
   first.addEventListener('click', () => {
-    wrap.replaceChildren(
+    fill(wrap, 
       h('span', { class: 'ask', text: sure }),
       h('button', { type: 'button', class: 'tc-btn', text: 'yes', onclick: (ev) => onYes(ev.currentTarget) }),
-      h('button', { type: 'button', class: 'tc-btn quiet', text: 'no', onclick: () => wrap.replaceChildren(first) }),
+      h('button', { type: 'button', class: 'tc-btn quiet', text: 'no', onclick: () => fill(wrap, first) }),
     );
   });
   wrap.append(first);
@@ -164,7 +170,7 @@ screens.start = function start(root) {
       go(state.me.consent_lookup ? '#/context' : '#/call');
     });
   });
-  root.replaceChildren(
+  fill(root, 
     h('div', { class: 'hero' },
       h('p', { class: 'tc-word big' }, 'tac', h('span', { class: 'bi', text: 'i' }), 't'),
       h('p', { class: 'tc-line', text: TAGLINE })),
@@ -183,7 +189,7 @@ screens.context = function context(root) {
   const list = h('div', { class: 'stack' });
   const draw = () => {
     const items = state.me.context || [];
-    list.replaceChildren(...(items.length ? items.map(contextCard)
+    fill(list, ...(items.length ? items.map(contextCard)
       : [h('p', { class: 'muted', text: 'Nothing found yet. That is a fine result: the interview starts from what you say.' })]));
   };
   const canLook = me.consent_lookup && state.config.lookup_enabled;
@@ -195,7 +201,7 @@ screens.context = function context(root) {
     toast(found.length ? `Found ${found.length}. Keep only what is right.` : 'Nothing found. That is fine.');
   }));
   draw();
-  root.replaceChildren(
+  fill(root, 
     title('your context'),
     h('p', { class: 'lede', text: me.consent_lookup
       ? 'Exa looks you up from what you gave us. Keep what is right about you; only kept items go into the interview.'
@@ -247,7 +253,7 @@ screens.call = function call(root) {
     btn.hidden = s.active || !(cfg.calls_enabled && state.me.consent_call);
     const mine = await get('/api/skills/mine').catch(() => []);
     const fresh = mine.filter((k) => k.source === 'interview' && k.created_at >= since);
-    live.replaceChildren(...fresh.map((k) => h('article', { class: 'tc-card saved' },
+    fill(live, ...fresh.map((k) => h('article', { class: 'tc-card saved' },
       h('h3', { class: 'card-title', text: k.title }), h('p', { text: k.verdict || '' }))));
     if (!s.active && polling) { clearInterval(polling); polling = null; }
     if (s.active && !polling) polling = every(3000, tick);
@@ -258,7 +264,7 @@ screens.call = function call(root) {
     status.textContent = CALL_WORDS[c.status] || c.status;
     if (!polling) polling = every(3000, tick);
   }));
-  root.replaceChildren(
+  fill(root, 
     title('a short conversation'),
     h('p', { class: 'lede', text: 'tacit calls you and asks about something you know how to do but never wrote down. Each skill it hears is saved as a draft for you to check.' }),
     btn,
@@ -277,13 +283,13 @@ export function jevLine(score) {
 }
 
 screens.skills = async function skills(root) {
-  root.replaceChildren(title('your skills'), h('p', { class: 'muted', text: 'loading…' }));
+  fill(root, title('your skills'), h('p', { class: 'muted', text: 'loading…' }));
   const mine = await get('/api/skills/mine');
   const list = h('div', { class: 'stack' });
-  list.replaceChildren(...(mine.length ? mine.map(ownSkillCard)
+  fill(list, ...(mine.length ? mine.map(ownSkillCard)
     : [h('p', { class: 'lede', text: 'No skills yet. Have a short conversation with tacit and they will appear here.' }),
       h('a', { class: 'tc-btn on-ground wide', href: '#/call', text: 'have a conversation' })]));
-  root.replaceChildren(title('your skills'),
+  fill(root, title('your skills'),
     h('p', { class: 'lede', text: 'Drafts are only yours. Publish the ones that are right.' }), list);
 };
 
@@ -317,12 +323,12 @@ function ownSkillCard(s) {
     acts.append(
       h('button', { type: 'button', class: 'tc-btn quiet', text: s.visibility === 'public' ? 'make it followers-only' : 'make it public',
         onclick: update({ visibility: s.visibility === 'public' ? 'followers' : 'public' }) }),
-      h('button', { type: 'button', class: 'tc-textlink', text: 'edit', onclick: () => card.replaceChildren(editForm(s, draw)) }),
+      h('button', { type: 'button', class: 'tc-textlink', text: 'edit', onclick: () => fill(card, editForm(s, draw)) }),
       twoStep('remove', 'remove it everywhere?', (b) => act(b, async () => {
         await patch(`/api/skills/${encodeURIComponent(s.id)}`, { status: 'removed' });
         card.remove();
       }), 'tc-textlink'));
-    card.replaceChildren(...skillBody(s), jev ? h('p', { class: 'jev', text: jev }) : null, acts);
+    fill(card, ...skillBody(s), jev ? h('p', { class: 'jev', text: jev }) : null, acts);
   };
   draw();
   return card;
@@ -378,10 +384,10 @@ function drawRing(cv, skills, cell) {
 }
 
 screens.people = async function people(root) {
-  root.replaceChildren(title('people'), h('p', { class: 'muted', text: 'loading…' }));
+  fill(root, title('people'), h('p', { class: 'muted', text: 'loading…' }));
   const list = await get('/api/people');
   const others = list.filter((p) => !state.me || p.id !== state.me.id);
-  root.replaceChildren(
+  fill(root, 
     title('people'),
     h('p', { class: 'lede', text: 'People who published what they know. Follow someone to see their skills in your feed.' }),
     others.length
@@ -404,7 +410,7 @@ export function price(cents) {
 }
 
 screens.person = async function person(root, id, params) {
-  root.replaceChildren(h('p', { class: 'muted', text: 'loading…' }));
+  fill(root, h('p', { class: 'muted', text: 'loading…' }));
   if (params && params.get('paid') === '1') toast('Thank you. Their followers-only skills unlock as soon as Stripe confirms.');
   const p = await get(`/api/people/${encodeURIComponent(id)}`);
   const isMe = state.me && p.id === state.me.id;
@@ -428,7 +434,7 @@ screens.person = async function person(root, id, params) {
         }) }));
     }
   }
-  root.replaceChildren(
+  fill(root, 
     h('header', { class: 'person-head' },
       ...personHeader.map((part) => part(p)),
       personRing(p, { size: 'lg' }),
@@ -442,6 +448,8 @@ screens.person = async function person(root, id, params) {
   );
 };
 
+// ---- the feed: lines, not cards (the team's design, screens/feed) ---------------------------
+
 const MADE = { writing: 'wrote', drawing: 'sketched', whiteboard: 'drew on a whiteboard', making: 'made something' };
 
 export function creativeLine(item) {
@@ -450,62 +458,216 @@ export function creativeLine(item) {
   return `${who} ${MADE[item.kind] || 'made something'} for ${m} minute${m === 1 ? '' : 's'}`;
 }
 
-function passChip(item) {
-  const chip = h('p', { class: `tc-chip pass${item.lit ? ' lit' : ''}` },
-    h('b', { text: (item.giver && item.giver.first_name || '').toLowerCase() }),
-    h('em', { text: 'passed' }),
-    h('i', { text: item.skill ? item.skill.title.toLowerCase() : 'a skill' }),
-    h('em', { text: 'to' }),
-    h('b', { text: (item.receiver && item.receiver.first_name || '').toLowerCase() }));
-  return h('div', { class: 'feed-item' }, chip);
-}
-
 const POST_WORDS = { recommendation: 'recommends', lesson: 'learned', idea: 'had an idea' };
 
-function postBody(item) {
-  const b = item.body || {};
-  const parts = [b.thing, b.why, b.verdict, b.reason, b.idea].filter((x) => typeof x === 'string' && x);
-  return parts.join(' · ');
+// The four feed tabs and which item types each shows.
+export const FEED_TABS = {
+  everything: null,
+  advice: new Set(['picked_up', 'post']),
+  skills: new Set(['skill', 'pass']),
+  people: new Set(['pass', 'creative']),
+};
+
+export function inTab(item, tab) {
+  const kinds = FEED_TABS[tab];
+  return !kinds || kinds.has(item.type);
+}
+
+function sameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+export function dayLabel(iso, now = new Date()) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  if (sameDay(d, now)) return 'today';
+  const y = new Date(now);
+  y.setDate(now.getDate() - 1);
+  if (sameDay(d, y)) return 'yesterday';
+  return d.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'short' }).toLowerCase();
+}
+
+function timeLabel(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return sameDay(d, new Date()) ? clock(iso).toLowerCase() : dayLabel(iso);
+}
+
+// A person as a small dotted ring with their initial (the design's fallback for a portrait).
+function face(name, big = false) {
+  const initial = String(name || '?').trim().charAt(0).toUpperCase() || '?';
+  return h('span', { class: `face ring${big ? ' big' : ''}`, 'aria-hidden': 'true', text: initial });
+}
+
+function head(parts, iso) {
+  return h('p', { class: 'head' }, ...parts.map((p) => (p && p.name !== undefined
+    ? h('b', { class: 'name', text: p.name }) : h('span', { text: p }))), h('time', { datetime: iso, text: timeLabel(iso) }));
+}
+
+function story(who, headParts, iso, ...body) {
+  return h('article', { class: 'story' }, face(who), h('div', { class: 'body' }, head(headParts, iso), ...body));
+}
+
+function because(text) {
+  return text ? h('p', { class: 'why' }, h('i', { text: 'because' }), text.replace(/^because\s+/i, '')) : null;
+}
+
+function said(text) {
+  return text ? h('p', { class: 'said', text: `“${text}”` }) : null;
+}
+
+function nameOf(p, fallback = 'someone') {
+  return (p && p.first_name) || fallback;
 }
 
 export function feedItem(item) {
-  if (item.type === 'pass') return passChip(item);
-  if (item.type === 'creative') {
-    return h('p', { class: 'feed-item creative tc-phrase', text: creativeLine(item) });
-  }
-  if (item.type === 'skill') {
-    return h('article', { class: 'tc-card skill' }, ...skillBody(item.skill, item.person && item.person.first_name));
-  }
-  if (item.type === 'post') {
-    const who = (item.person && item.person.first_name || '').toLowerCase();
-    return h('article', { class: 'tc-card post' },
-      h('p', { class: 'tag-phrase', text: `${who} ${POST_WORDS[item.kind] || 'shared'}` }),
-      h('h3', { class: 'card-title', text: item.title || '' }),
-      h('p', { text: postBody(item) }));
-  }
   if (item.type === 'picked_up') {
     const b = item.body || {};
-    return h('article', { class: 'tc-card picked' },
-      h('div', { class: 'top' }, h('span', { class: 'tag-phrase', text: 'you picked up' }),
-        h('span', { class: 'sig' }, h('small', { text: 'from' }), (item.giver && item.giver.first_name) || 'someone you talked with')),
-      h('h3', { class: 'card-title', text: item.title || b.title || '' }),
-      b.verdict ? h('p', { class: 'verdict', text: b.verdict }) : null,
-      b.reason ? h('p', { class: 'reason' }, h('em', { text: 'why: ' }), b.reason) : null,
-      b.quote ? h('p', { class: 'tc-said quote', text: `“${b.quote}”` }) : null,
-      h('p', { class: 'only-you', text: 'only you see this' }));
+    const giver = nameOf(item.giver, 'someone you talked with');
+    const momentId = String(item.id).replace(/^picked_up:/, '');
+    const acts = h('p', { class: 'acts' },
+      h('button', { type: 'button', text: 'keep it', onclick: (ev) => act(ev.currentTarget, async (btn) => {
+        await patch(`/api/moments/${encodeURIComponent(momentId)}`, { status: 'kept' });
+        btn.textContent = 'kept';
+      }) }),
+      h('button', { type: 'button', class: 'soft', text: 'dismiss', onclick: (ev) => act(ev.currentTarget, async (btn) => {
+        await patch(`/api/moments/${encodeURIComponent(momentId)}`, { status: 'dismissed' });
+        btn.closest('.story').remove();
+      }) }),
+      h('span', { class: 'note', text: 'only you see this' }));
+    return story(giver, [{ name: giver }, 'gave you advice · heard'], item.at,
+      h('h2', { class: 'line', text: item.title || b.title || b.verdict || '' }),
+      b.verdict && b.verdict !== item.title ? h('p', { class: 'note', text: b.verdict }) : null,
+      because(b.reason), said(b.quote), acts);
+  }
+  if (item.type === 'skill') {
+    const s = item.skill;
+    const who = nameOf(item.person);
+    return story(who, [{ name: who }, 'shared a new skill'], item.at,
+      h('h2', { class: 'line', text: s.title }),
+      s.locked ? h('p', { class: 'note' }, 'for followers who unlocked it · ',
+        h('a', { href: `#/people/${encodeURIComponent(item.person.id)}`, class: 'link', text: 'see how' }))
+        : [s.verdict ? h('p', { class: 'note', text: s.verdict }) : null, because(s.reason), said(s.quote)]);
+  }
+  if (item.type === 'pass') {
+    const giver = nameOf(item.giver);
+    const receiver = nameOf(item.receiver);
+    const youGave = state.me && item.giver && item.giver.id === state.me.id;
+    const youGot = state.me && item.receiver && item.receiver.id === state.me.id;
+    return h('article', { class: `story pass${item.lit ? ' lit' : ''}` }, face(giver),
+      h('div', { class: 'body' },
+        head([{ name: youGave ? 'You' : giver }, 'passed a skill to', { name: youGot ? 'you' : receiver }], item.at),
+        h('h2', { class: 'line', text: item.skill ? item.skill.title : 'a skill' }),
+        h('p', { class: 'note', text: 'you were in the same conversation, both wearing tacit' })));
+  }
+  if (item.type === 'creative') {
+    const who = nameOf(item.person);
+    return story(who, [{ name: who }, (MADE[item.kind] || 'made something')], item.at,
+      h('h2', { class: 'line', text: `for ${item.minutes || 0} minute${item.minutes === 1 ? '' : 's'}` }));
+  }
+  if (item.type === 'post') {
+    const b = item.body || {};
+    const who = nameOf(item.person);
+    return story(who, [{ name: who }, POST_WORDS[item.kind] || 'shared'], item.at,
+      h('h2', { class: 'line', text: item.title || b.thing || b.idea || '' }),
+      because(b.why || b.reason), b.verdict ? h('p', { class: 'note', text: b.verdict }) : null);
   }
   return null;
 }
 
-screens.feed = async function feed(root) {
-  root.replaceChildren(title('your feed'), h('p', { class: 'muted', text: 'loading…' }));
-  const items = await get('/api/feed');
-  root.replaceChildren(
-    title('your feed'),
-    h('div', { class: 'stack' }, ...(items.length ? items.map(feedItem).filter(Boolean)
-      : [h('p', { class: 'lede', text: 'Nothing here yet. Follow people to see the skills they publish.' }),
-        h('a', { class: 'tc-btn on-ground wide', href: '#/people', text: 'find people' })])),
-  );
+function sideColumn(items, following) {
+  const day = Date.now() - 24 * 3600 * 1000;
+  const met = new Map();
+  for (const i of items) {
+    if (i.type !== 'pass' || new Date(i.at).getTime() < day) continue;
+    for (const p of [i.giver, i.receiver]) {
+      if (p && p.id && (!state.me || p.id !== state.me.id)) met.set(p.id, { ...p, how: 'same conversation' });
+    }
+  }
+  const people = met.size ? [...met.values()]
+    : following.map((p) => ({ id: p.id, first_name: p.first_name, how: p.paid ? 'you unlocked their skills' : 'you follow their skills' }));
+  const recs = items.filter((i) => i.type === 'post' && i.kind === 'recommendation');
+  return h('aside', { class: 'col-people' },
+    people.length ? h('section', { class: 'met' },
+      h('p', { class: 'label', text: met.size ? 'people you met today' : 'people you follow' }),
+      h('ul', {}, ...people.slice(0, 8).map((p) => h('li', {},
+        h('a', { class: 'met-link', href: `#/people/${encodeURIComponent(p.id)}` }, face(p.first_name, true),
+          h('p', {}, h('b', { class: 'name', text: p.first_name }), h('small', { text: p.how }))))))) : null,
+    recs.length ? h('section', { class: 'recommends' },
+      h('p', { class: 'label', text: 'your network recommends' }),
+      h('ul', {}, ...recs.slice(0, 6).map((r) => h('li', {},
+        h('a', { href: `#/people/${encodeURIComponent(r.person.id)}`, text: r.title || (r.body && r.body.thing) || '' }), ' ',
+        h('small', { text: nameOf(r.person) })))),
+      h('p', { class: 'hint', text: 'What people you follow said was worth it.' })) : null);
+}
+
+screens.feed = async function feed(root, _id, params) {
+  const tab = params && FEED_TABS[params.get('tab')] !== undefined ? params.get('tab') : 'everything';
+  fill(root, h('h1', { class: 'title', text: 'today in your network' }), h('p', { class: 'label', text: 'loading…' }));
+  const [items, people] = await Promise.all([get('/api/feed'), get('/api/people').catch(() => [])]);
+  const following = people.filter((p) => p.following);
+  const shown = items.filter((i) => inTab(i, tab));
+  const lines = [];
+  let lastDay = null;
+  for (const i of shown) {
+    const day = dayLabel(i.at);
+    if (day !== lastDay) { lines.push(h('p', { class: 'label', text: day })); lastDay = day; }
+    const line = feedItem(i);
+    if (line) lines.push(line);
+  }
+  const tabs = h('nav', { class: 'tabs-feed', 'aria-label': 'feed' }, ...Object.keys(FEED_TABS).map((t) => h('a', {
+    href: t === 'everything' ? '#/feed' : `#/feed?tab=${t}`, class: t === tab ? 'on' : null,
+    'aria-current': t === tab ? 'true' : null, text: t })));
+  const empty = items.length
+    ? h('p', { class: 'note', text: `Nothing under "${tab}" yet.` })
+    : h('div', { class: 'stack' },
+      h('p', { class: 'note', text: 'Nothing here yet. Follow people to see the skills they publish; advice you hear with your band shows up here too, only for you.' }),
+      h('a', { class: 'tc-btn on-ground', href: '#/people', text: 'find people' }));
+  fill(root, h('div', { class: 'feed-layout' },
+    h('div', { class: 'col-feed' },
+      h('h1', { class: 'title', text: 'today in your network' }),
+      tabs,
+      h('div', { class: 'stories' }, ...(lines.length ? lines : [empty]))),
+    sideColumn(items, following)));
+};
+
+// ---- + connect: in person, by following, or by your context (screens in the team's design) --
+
+screens.connect = async function connect(root) {
+  fill(root, h('h1', { class: 'title', text: 'connect' }), h('p', { class: 'label', text: 'loading…' }));
+  const [people] = await Promise.all([get('/api/people').catch(() => []), pollBand()]);
+  const others = people.filter((p) => !state.me || p.id !== state.me.id);
+  const b = state.band;
+  const me = firstName(state.me.name) || 'You';
+  const inPerson = h('div', { class: 'tc-card form connect-card' },
+    h('h2', { class: 'card-title', text: 'connect in person' }),
+    h('p', { class: 'band-row' }, h('b', { class: 'hand', text: me }),
+      h('span', { class: 'band-badge', text: b ? `band ${b.band}` : 'no band yet' })),
+    h('p', { class: 'sub', text: 'what happens' }),
+    h('p', { text: 'Talk with someone who also wears tacit. When one of you explains how they do something, it becomes their draft skill, and a pass to the other once they publish it.' }),
+    h('p', { class: 'sub', text: 'what stays yours' }),
+    h('p', { text: 'Recordings, other people\'s words, and anything you haven\'t shared.' }),
+    h('div', { class: 'acts' }, b
+      ? h('a', { class: 'tc-btn', href: '#/me', text: b.listening ? 'your band is listening' : 'your band' })
+      : h('a', { class: 'tc-btn', href: '#/me', text: 'connect your band' })));
+  const follow = h('div', { class: 'tc-card form connect-card quiet-card' },
+    h('h2', { class: 'sub', text: 'no band on the other side?' }),
+    h('p', { text: 'Follow instead. It is one-way: their public skills reach your feed, and they see that you follow.' }),
+    others.length ? h('ul', { class: 'follow-list' }, ...others.slice(0, 12).map((p) => h('li', {},
+      h('a', { class: 'hand', href: `#/people/${encodeURIComponent(p.id)}`, text: p.first_name }),
+      p.following ? h('span', { class: 'note-ink', text: 'following' })
+        : h('button', { type: 'button', class: 'tc-btn quiet', text: `follow ${p.first_name}'s skills`, onclick: (ev) => act(ev.currentTarget, async (btn) => {
+          await post(`/api/follow/${encodeURIComponent(p.id)}`);
+          btn.replaceWith(h('span', { class: 'note-ink', text: 'following' }));
+        }) }))))
+      : h('p', { class: 'note-ink', text: 'Nobody has published a skill yet.' }));
+  const yours = h('div', { class: 'tc-card form connect-card quiet-card' },
+    h('h2', { class: 'sub', text: 'your own context' }),
+    h('p', { text: 'What is public about you, and a short conversation with tacit, start your profile.' }),
+    h('div', { class: 'acts' },
+      h('a', { class: 'tc-btn quiet', href: '#/context', text: 'connect your context' }),
+      h('a', { class: 'tc-btn quiet', href: '#/call', text: 'have a conversation' })));
+  fill(root, h('h1', { class: 'title', text: 'connect' }), inPerson, follow, yours);
 };
 
 // ---- the band: moments, "your band", the ListeningPill -------------------------------------
@@ -555,7 +717,7 @@ function momentCard(m) {
     }
     if (m.skill_id) acts.append(h('a', { class: 'tc-textlink', href: '#/skills', text: 'see the draft skill' }));
     const detail = momentDetail(m);
-    card.replaceChildren(
+    fill(card, 
       h('div', { class: 'top' }, h('span', { class: 'tag-phrase', text: KIND_WORDS[m.kind] || m.kind }),
         h('span', { class: 'when', text: `${clock(m.started_at)} · ${Math.round((m.confidence || 0) * 100)}% sure` })),
       m.title && m.title !== KIND_WORDS[m.kind] ? h('h3', { class: 'card-title', text: m.title }) : null,
@@ -568,7 +730,7 @@ function momentCard(m) {
 }
 
 screens.moments = async function moments(root) {
-  root.replaceChildren(title('your moments'), h('p', { class: 'muted', text: 'loading…' }));
+  fill(root, title('your moments'), h('p', { class: 'muted', text: 'loading…' }));
   const list = (await get('/api/moments')).filter((m) => m.status !== 'dismissed');
   const groups = [];
   for (const m of list) {
@@ -576,7 +738,7 @@ screens.moments = async function moments(root) {
     if (!groups.length || groups[groups.length - 1].key !== key) groups.push({ key, items: [] });
     groups[groups.length - 1].items.push(m);
   }
-  root.replaceChildren(
+  fill(root, 
     title('your moments'),
     h('p', { class: 'lede', text: 'What your band noticed. Only you see these, unless you share one.' }),
     ...(groups.length ? groups.map((g) => h('div', { class: 'stack' }, phrase(g.key), ...g.items.map(momentCard)))
@@ -598,11 +760,11 @@ function showPill(band) {
   pill.hidden = !s;
   pill.className = s === 'listening' ? 'listen-pill tc-pill' : `listen-pill${s === 'muted' ? ' muted' : ''}`;
   if (s === 'listening') {
-    pill.replaceChildren(h('span', { class: 'tc-bud', 'aria-hidden': 'true' }, ...Array.from({ length: 9 }, () => h('i'))), 'listening');
+    fill(pill, h('span', { class: 'tc-bud', 'aria-hidden': 'true' }, ...Array.from({ length: 9 }, () => h('i'))), 'listening');
   } else if (s === 'muted') {
-    pill.replaceChildren('muted');
+    fill(pill, 'muted');
   } else {
-    pill.replaceChildren();
+    fill(pill, );
   }
 }
 
@@ -633,12 +795,12 @@ function bandSection() {
           draw();
           card.prepend(tokenBox(out));
         }) })));
-      card.replaceChildren(h('p', { text: 'Which band is yours? The number is on its bag.' }), picks);
+      fill(card, h('p', { text: 'Which band is yours? The number is on its bag.' }), picks);
       return;
     }
     const status = !b.online ? 'the bridge is not running' : !b.connected ? 'the bridge can\'t see the band'
       : b.listening ? 'listening' : b.muted ? 'muted' : 'connected, not listening';
-    card.replaceChildren(
+    fill(card, 
       h('p', { class: 'band-status' }, h('b', { text: `band ${b.band}: ` }), status,
         typeof b.battery === 'number' ? ` · battery ${Math.round(b.battery)}%` : ''),
       h('button', { type: 'button', class: 'tc-btn big', text: b.muted ? 'unmute' : 'mute',
@@ -782,11 +944,11 @@ function pictureSection() {
     } else if (!description) {
       toast("Describe how you'd like to look."); return;
     }
-    candidates.replaceChildren(h('p', { class: 'muted-ink', text: 'making four pictures… this can take a minute' }));
+    fill(candidates, h('p', { class: 'muted-ink', text: 'making four pictures… this can take a minute' }));
     const out = await post('/api/portrait', body);
     body.photo = null;
     fileInput.value = '';
-    candidates.replaceChildren(h('p', { text: 'pick one:' }), ...out.candidates.map((rows) => h('button', {
+    fill(candidates, h('p', { text: 'pick one:' }), ...out.candidates.map((rows) => h('button', {
       type: 'button', class: 'candidate', 'aria-label': 'use this picture',
       onclick: (ev) => act(ev.currentTarget, async () => {
         const kept = await putPortrait(rows, mode);
@@ -819,11 +981,16 @@ screens.me = function me(root) {
     }).then(() => { box.checked = Boolean(state.me && state.me[name]); }));
     return h('label', { class: 'check' }, box, h('span', { text: label }));
   };
-  root.replaceChildren(
+  fill(root, 
     m.portrait ? portraitPatch(m.portrait) : null,
     title(firstName(m.name).toLowerCase() || 'me'),
     m.headline ? h('p', { class: 'lede', text: m.headline }) : null,
     h('p', { class: 'counts', text: `${m.counts.published} published · ${m.counts.followers} followers · ${m.counts.following} following` }),
+    h('nav', { class: 'profile-links', 'aria-label': 'yours' },
+      h('a', { class: 'tc-btn on-ground', href: '#/skills', text: `your skills (${m.counts.skills})` }),
+      h('a', { class: 'tc-btn on-ground quiet', href: '#/moments', text: 'your moments' }),
+      h('a', { class: 'tc-btn on-ground quiet', href: '#/call', text: 'have a conversation' }),
+      h('a', { class: 'tc-btn on-ground quiet', href: `#/people/${encodeURIComponent(m.id)}`, text: 'how others see you' })),
     phrase('what you agreed to'),
     h('div', { class: 'tc-card form' },
       toggle('consent_lookup', "Look me up on the web (Exa) so the interview starts from what's public"),
@@ -866,12 +1033,15 @@ function go(hash) {
   else location.hash = hash;
 }
 
+// Which item of the shell (feed · network · profile · + connect) each screen belongs to.
+const NAV_SECTION = { person: 'people', skills: 'me', moments: 'me', call: 'me', context: 'connect' };
+
 async function render() {
   clearTimers();
   let route = parseRoute(location.hash);
-  if (!screens[route.name]) route = { name: state.me ? 'skills' : 'start', id: null };
+  if (!screens[route.name]) route = { name: state.me ? 'feed' : 'start', id: null };
   if (!state.me && !PUBLIC_ROUTES.has(route.name)) route = { name: 'start', id: null };
-  if (state.me && route.name === 'start') route = { name: 'skills', id: null };
+  if (state.me && route.name === 'start') route = { name: 'feed', id: null };
   state.route = route;
   try { localStorage.setItem(LAST_ROUTE, `#/${route.name === 'person' ? `people/${route.id}` : route.name}`); } catch { /* private mode */ }
   for (const s of document.querySelectorAll('[data-screen]')) s.hidden = true;
@@ -879,15 +1049,17 @@ async function render() {
   const root = document.querySelector(`[data-screen="${key}"]`);
   root.hidden = false;
   $('#nav').hidden = !state.me;
+  $('#nav-top').hidden = !state.me;
+  const section = NAV_SECTION[route.name] || route.name;
   for (const a of document.querySelectorAll('[data-nav]')) {
-    if (a.dataset.nav === route.name || (route.name === 'person' && a.dataset.nav === 'people')) a.setAttribute('aria-current', 'page');
+    if (a.dataset.nav === section) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
   }
   try {
     await screens[route.name](root, route.id, route.params);
   } catch (e) {
     if (e instanceof ApiError && e.status === 401) { state.me = null; go('#/start'); return; }
-    root.replaceChildren(title('hmm'), h('p', { class: 'lede', text: errorText(e) }));
+    fill(root, title('hmm'), h('p', { class: 'lede', text: errorText(e) }));
   }
   window.scrollTo(0, 0);
 }
