@@ -498,3 +498,24 @@ async def test_double_taps_keep_a_minute_once(tmp_path):
     await r.bridge.tick()
     assert [m["kind"] for batch in r.server.named("moments") for m in batch] == ["kept"]
     await r.close()
+
+
+async def test_a_dropped_speech_connection_reconnects(tmp_path):
+    r = await rig(tmp_path)
+    first = r.ears[0]
+    first.error = "the connection closed"          # what the kit's engine sets when it drops
+    await r.bridge.tick()
+    assert first.stopped and len(r.ears) == 2 and r.bridge.ears is r.ears[1]
+    assert any("reconnecting" in line for line in r.lines)
+    r.ears[1].error = "again"
+    await r.bridge.tick()                           # not again within 10 s
+    assert len(r.ears) == 2
+    await r.advance(11000, step=1000)
+    await r.bridge.tick()
+    assert len(r.ears) == 3
+    # muted: no reconnecting
+    await r.bridge.mute("test")
+    await r.advance(11000, step=1000)
+    await r.bridge.tick()
+    assert len(r.ears) == 3
+    await r.close()

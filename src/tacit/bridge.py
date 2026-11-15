@@ -55,6 +55,7 @@ MIC_LEVEL_S = 0.1
 MAX_KEYTERMS = 20
 HANDSHAKE_TAP_S = 2.0   # a double-tap this close to a handshake is part of it
 KEEP_ONCE_S = 60.0      # one "keep that" per minute
+SPEECH_RESTART_S = 10.0 # reconnect a dropped speech connection at most this often
 GESTURE_NOT_HANDSHAKE_S = 3.0   # a "handshake" this soon after a mute gesture was that gesture
 
 
@@ -244,6 +245,7 @@ class Bridge:
         self.last_shake = float("-inf")
         self.last_gesture = float("-inf")
         self.last_kept = float("-inf")
+        self.last_speech_restart = float("-inf")
         self.gesturing: list[motion.Session] = []
         self.speech_windows: deque[float] = deque(maxlen=2000)  # when final speech arrived
         self.tasks: set[asyncio.Task] = set()
@@ -583,7 +585,25 @@ class Bridge:
         if self.offline and self.listening and not self.muted:
             self.start_ears()   # back online: live speech again
 
+    async def check_speech(self) -> None:
+        """The kit's Deepgram engine sets `error` when its connection closes (it then hears
+        nothing, while the band still sends sound). Reconnect, at most every 10 s."""
+        ears = self.ears
+        if ears is None or not self.listening or self.muted or not getattr(ears, "error", None):
+            return
+        t = self.clock()
+        if t - self.last_speech_restart < SPEECH_RESTART_S:
+            return
+        self.last_speech_restart = t
+        log.info("speech connection dropped: reconnecting")
+        self.echo("tacit bridge: the speech connection dropped; reconnecting")
+        self.ears = None
+        await asyncio.get_running_loop().run_in_executor(None, _stop_quietly, ears)
+        if self.listening and not self.muted:
+            self.start_ears()
+
     async def tick(self) -> None:
+        await self.check_speech()
         await self.take_pieces()
         t = self.clock()
         if t - self._last_poll >= POLL_COMMANDS_S:
