@@ -465,7 +465,7 @@ export const FEED_TABS = {
   everything: null,
   advice: new Set(['picked_up', 'post']),
   skills: new Set(['skill', 'pass']),
-  people: new Set(['pass', 'creative']),
+  people: new Set(['pass', 'creative', 'connected']),
 };
 
 export function inTab(item, tab) {
@@ -560,6 +560,13 @@ export function feedItem(item) {
         h('h2', { class: 'line', text: item.skill ? item.skill.title : 'a skill' }),
         h('p', { class: 'note', text: 'you were in the same conversation, both wearing tacit' })));
   }
+  if (item.type === 'connected') {
+    const who = nameOf(item.person);
+    return story('You', [{ name: 'You' }, 'and', { name: who }, 'connected · handshake'], item.at,
+      h('h2', { class: 'line', text: `You shook hands with ${who}` }),
+      h('p', { class: 'note' }, 'You now follow each other. ',
+        h('a', { class: 'link', href: `#/people/${encodeURIComponent(item.person.id)}`, text: `see ${who}'s skills` })));
+  }
   if (item.type === 'creative') {
     const who = nameOf(item.person);
     return story(who, [{ name: who }, (MADE[item.kind] || 'made something')], item.at,
@@ -579,6 +586,10 @@ function sideColumn(items, following) {
   const day = Date.now() - 24 * 3600 * 1000;
   const met = new Map();
   for (const i of items) {
+    if (i.type === 'connected' && new Date(i.at).getTime() >= day && i.person) {
+      met.set(i.person.id, { ...i.person, how: 'connected · handshake' });
+      continue;
+    }
     if (i.type !== 'pass' || new Date(i.at).getTime() < day) continue;
     for (const p of [i.giver, i.receiver]) {
       if (p && p.id && (!state.me || p.id !== state.me.id)) met.set(p.id, { ...p, how: 'same conversation' });
@@ -733,7 +744,7 @@ export const KIND_WORDS = {
   recommendation: 'a recommendation', idea: 'an idea', presenting: 'presenting',
   writing: 'writing', drawing: 'drawing', whiteboard: 'at the whiteboard', typing: 'typing',
   making: 'making something', walking_meeting: 'a walking meeting', demonstration: 'a demonstration',
-  kept: 'a minute you kept',
+  kept: 'a minute you kept', handshake: 'a handshake',
 };
 const SHAREABLE = new Set(['recommendation', 'lesson', 'idea']);
 
@@ -769,6 +780,7 @@ export function momentFields(m) {
   add('the question', b.question);
   add('about', b.topic);
   add('the idea', b.idea);
+  add('with', b.with);
   if (Array.isArray(b.matches) && b.matches.length) {
     rows.push(['people who know', b.matches.map((x) => `${x.first_name}: ${x.title}`)]);
   }

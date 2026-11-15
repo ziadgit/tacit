@@ -16,6 +16,7 @@ MomentKind = Literal[
     "stop_request", "conversation", "advice_given", "advice_received", "explanation", "lesson",
     "question", "decision", "commitment", "recommendation", "idea", "presenting", "writing",
     "drawing", "whiteboard", "typing", "making", "walking_meeting", "demonstration", "kept",
+    "handshake",
 ]
 MOMENT_KINDS: tuple[str, ...] = MomentKind.__args__  # type: ignore[attr-defined]
 CREATIVE_KINDS = ("writing", "drawing", "whiteboard", "making")
@@ -229,7 +230,7 @@ class MomentOut(BaseModel):
 
 
 class FeedItemOut(BaseModel):
-    type: Literal["skill", "pass", "creative", "post", "picked_up"]
+    type: Literal["skill", "pass", "creative", "post", "picked_up", "connected"]
     id: str
     at: datetime
     person: dict[str, Any] | None = None       # {id, first_name}

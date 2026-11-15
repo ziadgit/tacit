@@ -179,3 +179,46 @@ def test_bridge_config_keyterms(tmp_path):
     assert cfg["keyterms"][0] == "Maya"
     assert "Acme Robotics" in cfg["keyterms"] and "Oakland" in cfg["keyterms"]
     assert not any("Secret" in k for k in cfg["keyterms"])
+
+
+def test_handshakes_connect_two_people(tmp_path):
+    from tacit.domain import now
+
+    store, app, pwa, bridge, uid, token = paired(tmp_path, band=74)
+    other = TestClient(app, base_url="https://tacit.example")
+    ana_id = onboard(other, phone="+14155550101", name="Ana Ruiz")["id"]
+    tok2 = other.post("/api/band/pair", json={"band": 16}).json()["token"]
+    bridge2 = TestClient(app, base_url="https://tacit.example",
+                         headers={"authorization": f"Bearer {tok2}"})
+    t = now()
+
+    def shake(client, at):
+        body = {"moments": [{"kind": "handshake", "started_at": at.isoformat(),
+                             "ended_at": at.isoformat(), "confidence": 1.0}]}
+        assert client.post("/api/bridge/moments", json=body).json() == {"stored": 1}
+
+    # 5 s apart: not the same handshake
+    shake(bridge, t - timedelta(seconds=30))
+    shake(bridge2, t - timedelta(seconds=25))
+    assert store.get_follow(uid, ana_id) is None
+    # 1 s apart: they met
+    shake(bridge, t)
+    shake(bridge2, t + timedelta(seconds=1))
+    assert store.get_follow(uid, ana_id) and store.get_follow(ana_id, uid)
+    mine = store.moments_for(uid, kind="handshake")[0]
+    assert mine.title == "you shook hands with Ana" and mine.body["person_id"] == ana_id
+    theirs = store.moments_for(ana_id, kind="handshake")[0]
+    assert theirs.body["with"] == "Maya"
+    feed = pwa.get("/api/feed").json()
+    connected = [i for i in feed if i["type"] == "connected"]
+    assert len(connected) == 1 and connected[0]["person"]["first_name"] == "Ana"
+    assert connected[0]["only_you"] is True
+    # a third shake at the same moment can't pair with an already-paired one
+    shake(bridge, t + timedelta(seconds=1))
+    paired_up = [m for m in store.moments_for(uid, kind="handshake") if m.body.get("person_id")]
+    assert len(paired_up) == 1
+    # switched off: not recorded
+    other.patch("/api/me", json={"kinds_off": ["handshake"]})
+    body = {"moments": [{"kind": "handshake", "started_at": t.isoformat(),
+                         "ended_at": t.isoformat()}]}
+    assert bridge2.post("/api/bridge/moments", json=body).json() == {"stored": 0}

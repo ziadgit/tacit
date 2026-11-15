@@ -178,6 +178,12 @@ def feed_items(store: Store, viewer: User) -> list[FeedItemOut]:
                                  lit=t - p.created_at < PASS_NEW))
 
     items.extend(picked_up(store, viewer))
+    for m in store.moments_for(viewer.id, kind="handshake"):
+        pid = m.body.get("person_id")
+        other = user(pid) if pid and m.status != "dismissed" else None
+        if other is not None:
+            items.append(FeedItemOut(type="connected", id=f"connected:{m.id}", at=m.ended_at,
+                                     person=who(other), only_you=True))
     items.sort(key=lambda i: i.at, reverse=True)
     return items[:FEED_MAX]
 

@@ -452,3 +452,39 @@ async def test_mute_and_unmute_are_reported_at_once(tmp_path):
     await r.bridge.unmute("test")
     assert r.server.named("state")[-1]["muted"] is False
     await r.close()
+
+
+def handshake_motion(seconds=1.5, rate=100):
+    return [dict(ax=0.0, ay=0.0, az=1 + 0.6 * math.sin(2 * math.pi * 4 * i / rate),
+                 gx=0.0, gy=0.0, gz=0.0) for i in range(int(seconds * rate))]
+
+
+async def test_a_handshake_is_recorded_and_never_mutes(tmp_path):
+    r = await rig(tmp_path)
+    await r.advance(2500)                           # calm first
+    r.sim.play_motion(handshake_motion())
+    await r.advance(4000)
+    await r.bridge.tick()
+    kinds = [m["kind"] for batch in r.server.named("moments") for m in batch]
+    assert kinds == ["handshake"]
+    assert not r.bridge.muted and r.mic_on
+    sent = r.server.named("moments")[0][0]
+    assert set(sent) == {"kind", "started_at", "ended_at", "confidence"}   # no motion data
+    # the band's own double-tap during the handshake is not "keep that"
+    r.sim.tap("double-tap")
+    await r.advance(100)
+    await r.bridge.tick()
+    assert [m["kind"] for batch in r.server.named("moments") for m in batch] == ["handshake"]
+    await r.close()
+
+
+async def test_a_mute_gesture_is_never_a_handshake(tmp_path):
+    r = await rig(tmp_path)
+    await r.advance(2500)
+    await mute_by(r, "x")
+    await r.advance(4000)
+    await r.settle()
+    await r.bridge.tick()
+    assert r.bridge.muted
+    assert "handshake" not in [m["kind"] for batch in r.server.named("moments") for m in batch]
+    await r.close()

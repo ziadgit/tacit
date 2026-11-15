@@ -34,7 +34,7 @@ from typing import Any
 
 import httpx
 
-from . import gestures, motion
+from . import gestures, handshake, motion
 from .config import Settings, require, require_band
 from .offline import AudioBuffer, Backoff, DeepgramPrerecorded, EventQueue, drain
 
@@ -53,6 +53,8 @@ POST_STATE_S = 10.0
 LEVEL_KEEP_S = 600
 MIC_LEVEL_S = 0.1
 MAX_KEYTERMS = 20
+HANDSHAKE_TAP_S = 2.0   # a double-tap this close to a handshake is part of it
+GESTURE_NOT_HANDSHAKE_S = 3.0   # a "handshake" this soon after a mute gesture was that gesture
 
 
 def iso(ts: float) -> str:
@@ -237,6 +239,9 @@ class Bridge:
         self.pending_moments: list[dict[str, Any]] = []
         self.pending_rewind = 0
         self.motion = motion.SessionTracker()                  # motion detectors (§13.6)
+        self.shake = handshake.ShakeDetector()                 # "I'm shaking a hand"
+        self.last_shake = float("-inf")
+        self.last_gesture = float("-inf")
         self.gesturing: list[motion.Session] = []
         self.speech_windows: deque[float] = deque(maxlen=2000)  # when final speech arrived
         self.tasks: set[asyncio.Task] = set()
@@ -382,11 +387,28 @@ class Bridge:
         label = self.detector.feed(m, now=getattr(m, "t", None))   # the gesture check comes first
         if label is not None:
             self.on_gesture(label, self.detector.last.distance if self.detector.last else 1.0)
+        if self.shake.feed(m):
+            self.on_handshake()
         t = getattr(m, "time", None)
         t = float(t) if isinstance(t, int | float) else self.clock()
         self.last_motion_t = t
         for session in self.motion.feed(m, t, speech_active=self.speech_active(t)):
             self.add_session(session)
+
+    def on_handshake(self) -> None:
+        """A shake felt on this band: a private moment with only its time. The server pairs it
+        with another wearer's shake at the same moment. No motion data leaves the bridge."""
+        t = self.clock()
+        if t - self.last_gesture <= GESTURE_NOT_HANDSHAKE_S:
+            return   # that was a mute gesture (X / figure 8), which has priority
+        self.last_shake = t
+        # the shake also looks like taps to the band: drop a "keep that" from just before it
+        cut = t - HANDSHAKE_TAP_S
+        self.pending_moments = [m for m in self.pending_moments
+                                if not (m["kind"] == "kept" and m.get("_at", 0) >= cut)]
+        self.pending_moments.append({"kind": "handshake", "started_at": iso(t), "ended_at": iso(t),
+                                     "confidence": 1.0})
+        self.echo("tacit bridge: handshake")
 
     def speech_active(self, t: float) -> bool:
         return bool(self.speech_windows) and t - self.speech_windows[-1] <= 10.0
@@ -405,6 +427,7 @@ class Bridge:
                                      "ended_at": iso(s.ended_at), "confidence": s.confidence})
 
     def on_gesture(self, label: str, distance: float) -> None:
+        self.last_gesture = self.clock()
         if not self.muted:
             self._spawn(self.mute(f"gesture {label}"))
         elif distance <= gestures.UNMUTE_LIMIT:
@@ -417,8 +440,10 @@ class Bridge:
                 self._spawn(self.unmute("gesture and double-tap"))
             return
         t = self.clock()
+        if t - self.last_shake <= HANDSHAKE_TAP_S:
+            return   # part of a handshake, not "keep that"
         self.pending_moments.append({"kind": "kept", "started_at": iso(t - 60),
-                                     "ended_at": iso(t), "confidence": 1.0})
+                                     "ended_at": iso(t), "confidence": 1.0, "_at": t})
 
     def on_audio(self, a: Any) -> None:
         if not self.listening or self.muted:
@@ -535,7 +560,8 @@ class Bridge:
             moments = [m for m in self.queue.items() + self.pending_moments
                        if m.get("kind") not in self.kinds_off]
             if moments:
-                await self.server.moments(moments)
+                await self.server.moments([{k: v for k, v in m.items() if not k.startswith("_")}
+                                           for m in moments])
             self.queue.clear()
             self.pending_moments = []
             if self.transcriber is not None and self.buffer.files():

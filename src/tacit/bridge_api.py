@@ -35,7 +35,8 @@ BRIDGE_PER_MINUTE = 240         # polls every 2 s + state every 10 s + uploads, 
 MAX_REWIND_S = 3600
 KEEP_WINDOW_S = 60              # double-tap "keep that" marks the last minute
 MOTION_KINDS = (*CREATIVE_KINDS, "typing", "presenting", "walking_meeting", "demonstration")
-BRIDGE_MOMENT_KINDS = (*MOTION_KINDS, "kept")
+BRIDGE_MOMENT_KINDS = (*MOTION_KINDS, "kept", "handshake")
+HANDSHAKE_WITHIN = timedelta(seconds=2)   # two shakes this close, on two people's bands, met
 
 
 def token_hash(token: str) -> str:
@@ -318,6 +319,8 @@ def bridge_moments(body: MomentsIn, request: Request, background: BackgroundTask
         stored += 1
         if m.kind == "kept" and (p := pipeline(request)) is not None:
             background.add_task(p.on_kept, dev, moment)
+        if m.kind == "handshake":
+            match_handshake(store, moment)
     log.info("bridge moments: %d", stored)
     return {"stored": stored}
 
@@ -326,8 +329,38 @@ KIND_TITLES = {
     "writing": "writing", "drawing": "drawing", "whiteboard": "at the whiteboard",
     "typing": "typing", "making": "making something", "presenting": "presenting",
     "walking_meeting": "a walking meeting", "demonstration": "a demonstration",
-    "kept": "you kept this minute",
+    "kept": "you kept this minute", "handshake": "a handshake",
 }
+
+
+def match_handshake(store: Store, mine: Moment) -> Moment | None:
+    """Pair this shake with another wearer's shake at the same moment (within 2 s): the two
+    have met. Both moments name the other person, and the two follow each other. Matching is
+    by time only (no motion leaves the bridges)."""
+    best: tuple[timedelta, Moment] | None = None
+    for dev in store.all_devices():
+        if dev.user_id == mine.user_id:
+            continue
+        for other in store.moments_for(dev.user_id, since=mine.started_at - HANDSHAKE_WITHIN,
+                                       kind="handshake"):
+            gap = abs(other.started_at - mine.started_at)
+            if gap <= HANDSHAKE_WITHIN and not other.body.get("person_id") \
+                    and (best is None or gap < best[0]):
+                best = (gap, other)
+    if best is None:
+        return None
+    other = best[1]
+    me, them = store.get_user(mine.user_id), store.get_user(other.user_id)
+    if me is None or them is None:
+        return None
+    for m, person in ((mine, them), (other, me)):
+        name = first_name(person.name)
+        store.update_moment(m.id, title=f"you shook hands with {name}",
+                            body={**m.body, "person_id": person.id, "with": name})
+    store.follow(me.id, them.id)
+    store.follow(them.id, me.id)
+    log.info("handshake: two people connected")
+    return store.get_moment(mine.id)
 
 
 def rewind(store: Store, dev: BridgeDevice, seconds: int) -> dict[str, int]:
